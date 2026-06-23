@@ -1,0 +1,88 @@
+{
+    "name": "fintech/api",
+    "description": "Fintech API - Symfony DDD",
+    "type": "project",
+    "license": "proprietary",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.3",
+        "ext-ctype": "*",
+        "ext-iconv": "*",
+        "doctrine/doctrine-bundle": "^2.12",
+        "doctrine/doctrine-migrations-bundle": "^3.3",
+        "doctrine/orm": "^3.2",
+        "symfony/console": "7.3.*",
+        "symfony/dotenv": "7.3.*",
+        "symfony/flex": "^2",
+        "symfony/framework-bundle": "7.3.*",
+        "symfony/runtime": "7.3.*",
+        "symfony/serializer": "7.3.*",
+        "symfony/uid": "7.3.*",
+        "symfony/validator": "7.3.*",
+        "symfony/yaml": "7.3.*"
+    },
+    "require-dev": {
+        "dama/doctrine-test-bundle": "^8.0",
+        "phpunit/phpunit": "^11",
+        "symfony/browser-kit": "7.3.*",
+        "symfony/http-client": "7.3.*",
+        "symfony/maker-bundle": "^1.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "symfony/flex": true,
+            "symfony/runtime": true
+        },
+        "sort-packages": true,
+        "audit": {
+            "ignore": [
+                "PKSA-xf5h-y6vg-qj98",
+                "PKSA-py8y-z9q7-q197",
+                "PKSA-v5yj-8nmz-sk2q",
+                "PKSA-ft77-7h5f-p3r6",
+                "PKSA-b14r-zh1d-vdrc",
+                "PKSA-5r1g-c7b7-y1zg",
+                "PKSA-z7t6-zt6p-wtng"
+            ]
+        }
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "App\\Tests\\": "tests/"
+        }
+    },
+    "replace": {
+        "symfony/polyfill-ctype": "*",
+        "symfony/polyfill-iconv": "*",
+        "symfony/polyfill-php72": "*",
+        "symfony/polyfill-php73": "*",
+        "symfony/polyfill-php74": "*",
+        "symfony/polyfill-php80": "*",
+        "symfony/polyfill-php81": "*"
+    },
+    "scripts": {
+        "auto-scripts": {
+            "cache:clear": "symfony-cmd",
+            "assets:install %PUBLIC_DIR%": "symfony-cmd"
+        },
+        "post-install-cmd": [
+            "@auto-scripts"
+        ],
+        "post-update-cmd": [
+            "@auto-scripts"
+        ]
+    },
+    "extra": {
+        "symfony": {
+            "allow-contrib": false,
+            "require": "7.3.*"
+        }
+    }
+}

@@ -1,0 +1,16 @@
+parameters:
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Domain/Model/'
+            - '../src/Kernel.php'
+
+    # Repository interface → implementation bindings
+    App\Domain\Repository\CompanyRepositoryInterface:
+        alias: App\Infrastructure\Persistence\Repository\DoctrineCompanyRepository
