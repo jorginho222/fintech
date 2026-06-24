@@ -18,6 +18,7 @@ make bash        # Shell into the php container
 make install     # composer install inside container
 make migrate     # Run pending Doctrine migrations
 make test        # Run full PHPUnit test suite
+make composer args="<command>"  # Run arbitrary Composer command inside container
 ```
 
 Run a single test or test suite from inside the container (`make bash` first):
@@ -39,7 +40,7 @@ The project uses a layered DDD structure under `src/`:
 
 ```
 Domain/          # Pure business logic — no framework dependencies
-  Model/         # Entities and value objects (e.g. Company, TaxStatus enum)
+  Model/         # Entities and value objects
   Repository/    # Repository interfaces only
   Event/         # Domain events (placeholder)
   Service/       # Domain services (placeholder)
@@ -52,11 +53,29 @@ Infrastructure/  # Framework & external system adapters
   Persistence/
     Doctrine/Mapping/  # XML ORM mappings (not annotations) — one file per entity
     Repository/        # Doctrine implementations of domain repository interfaces
+  Service/             # Infrastructure services (placeholder)
 
 UI/
-  Api/Controller/  # Symfony controllers (HTTP entry points)
+  Api/Controller/  # Symfony controllers (HTTP entry points) — use PHP attributes for routing
   Console/         # Symfony console commands
 ```
+
+### Current domain model
+
+| Class | Type | Table / Notes |
+|---|---|---|
+| `Company` | Entity | `companies` — aggregate root; owns a collection of `CreditRequest` |
+| `CreditRequest` | Entity | `credit_requests` — belongs to `Company`; owns a collection of `Installment` |
+| `Installment` | Entity | `installments` — belongs to `CreditRequest` |
+| `TaxStatus` | Enum | `Monotributo`, `ResponsableInscripto`, `Exento`, `ConsumidorFinal` |
+| `CreditRequestStatus` | Enum | `Draft`, `ScoringPending`, `ManualReview`, `Approved`, `Rejected`, `Active`, `Paid` |
+| `InstallmentStatus` | Enum | `Pending`, `Paid`, `Overdue` |
+
+### Repository interfaces and implementations
+
+| Interface | Implementation |
+|---|---|
+| `CompanyRepositoryInterface` | `DoctrineCompanyRepository` |
 
 **Key constraint:** Domain models (`src/Domain/Model/`) are excluded from Symfony's service container (see `config/services.yaml`). They must stay free of framework annotations and constructor injection.
 
@@ -65,6 +84,8 @@ UI/
 **Repository binding:** Interface → implementation wiring is done explicitly in `config/services.yaml` under the `# Repository interface → implementation bindings` section.
 
 **ID strategy:** Entity IDs use `strategy="NONE"` — the caller is responsible for generating UUIDs (use `symfony/uid`).
+
+**Routing:** `config/routes.yaml` auto-discovers routes from PHP attributes on controllers under the `App\UI\Api\Controller` namespace.
 
 ## Testing Layout
 

@@ -1,0 +1,11 @@
+### Create company
+POST {{base_url}}/api/company
+Content-Type: application/json
+
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "socialReason": "Mi Empresa SRL",
+  "cuit": "20123456789",
+  "email": "contacto@empresa.com",
+  "taxStatus": "monotributo"
+}
