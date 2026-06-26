@@ -1,5 +1,11 @@
-controllers:
+company_controllers:
     resource:
-        path: ../src/UI/Api/Controller/
-        namespace: App\UI\Api\Controller
+        path: ../src/Company/UI/Api/Controller/
+        namespace: App\Company\UI\Api\Controller
+    type: attribute
+
+credit_request_controllers:
+    resource:
+        path: ../src/CreditRequest/UI/Api/Controller/
+        namespace: App\CreditRequest\UI\Api\Controller
     type: attribute

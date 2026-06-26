@@ -8,9 +8,10 @@ services:
     App\:
         resource: '../src/'
         exclude:
-            - '../src/Domain/Model/'
+            - '../src/Company/Domain/Model/'
+            - '../src/CreditRequest/Domain/Model/'
             - '../src/Kernel.php'
 
     # Repository interface → implementation bindings
-    App\Domain\Repository\CompanyRepositoryInterface:
-        alias: App\Infrastructure\Persistence\Repository\DoctrineCompanyRepository
+    App\Company\Domain\Repository\CompanyRepositoryInterface:
+        alias: App\Company\Infrastructure\Persistence\Repository\DoctrineCompanyRepository

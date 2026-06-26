@@ -7,12 +7,18 @@ doctrine:
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: false
         mappings:
-            App:
+            Company:
                 is_bundle: false
                 type: xml
-                dir: '%kernel.project_dir%/src/Infrastructure/Persistence/Doctrine/Mapping'
-                prefix: 'App\Domain\Model'
-                alias: App
+                dir: '%kernel.project_dir%/src/Company/Infrastructure/Persistence/Doctrine/Mapping'
+                prefix: 'App\Company\Domain\Model'
+                alias: Company
+            CreditRequest:
+                is_bundle: false
+                type: xml
+                dir: '%kernel.project_dir%/src/CreditRequest/Infrastructure/Persistence/Doctrine/Mapping'
+                prefix: 'App\CreditRequest\Domain\Model'
+                alias: CreditRequest
 
 when@test:
     doctrine:

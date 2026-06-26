@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Company\Domain\Model\Company" table="companies">
+        <id name="id" type="string" column="id">
+            <generator strategy="NONE"/>
+        </id>
+        <field name="socialReason" column="social_reason" type="string" nullable="false"/>
+        <field name="cuit" column="cuit" type="string" length="11" nullable="false"/>
+        <field name="email" column="email" type="string" nullable="false"/>
+        <field name="taxStatus" column="tax_status" type="string" enum-type="App\Company\Domain\Model\TaxStatus" nullable="false"/>
+
+        <one-to-many field="creditRequestCollection" target-entity="App\CreditRequest\Domain\Model\CreditRequest" mapped-by="company"/>
+    </entity>
+
+</doctrine-mapping>

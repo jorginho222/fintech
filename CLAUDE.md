@@ -36,74 +36,62 @@ docker compose exec php bin/console doctrine:migrations:diff
 
 ## Architecture
 
-The project uses a layered DDD structure under `src/`:
+Module-first structure: `src/{Module}/{Layer}/`. Each module is self-contained.
 
 ```
-Domain/          # Pure business logic — no framework dependencies
-  Model/         # Entities and value objects
-  Repository/    # Repository interfaces only
-  Event/         # Domain events (placeholder)
-  Service/       # Domain services (placeholder)
-
-Application/     # Orchestration layer
-  UseCase/       # One class per use case; depends on Domain interfaces
-  DTO/           # Input/output data transfer objects
-
-Infrastructure/  # Framework & external system adapters
-  Persistence/
-    Doctrine/Mapping/  # XML ORM mappings (not annotations) — one file per entity
-    Repository/        # Doctrine implementations of domain repository interfaces
-  Service/             # Infrastructure services (placeholder)
-
-UI/
-  Api/Controller/  # Symfony controllers (HTTP entry points) — use PHP attributes for routing
-  Console/         # Symfony console commands
+src/
+  {Module}/                     # e.g. Company, CreditRequest
+    Domain/
+      Model/                    # Entities and value objects — no framework deps
+      Repository/               # Repository interfaces only
+      Event/                    # Domain events
+      Service/                  # Domain services
+    Application/
+      UseCase/                  # One class per use case
+      DTO/                      # Input/output DTOs
+    Infrastructure/
+      Persistence/
+        Doctrine/Mapping/       # XML ORM mappings — one file per entity
+        Repository/             # Doctrine implementations of domain interfaces
+      Service/
+    UI/
+      Api/Controller/           # Symfony controllers — PHP attribute routing
+      Console/
 ```
 
-### Current domain model
+### Modules and domain model
 
-| Class | Type | Table / Notes |
-|---|---|---|
-| `Company` | Entity | `companies` — aggregate root; owns a collection of `CreditRequest` |
-| `CreditRequest` | Entity | `credit_requests` — belongs to `Company`; owns a collection of `Installment` |
-| `Installment` | Entity | `installments` — belongs to `CreditRequest` |
-| `TaxStatus` | Enum | `Monotributo`, `ResponsableInscripto`, `Exento`, `ConsumidorFinal` |
-| `CreditRequestStatus` | Enum | `Draft`, `ScoringPending`, `ManualReview`, `Approved`, `Rejected`, `Active`, `Paid` |
-| `InstallmentStatus` | Enum | `Pending`, `Paid`, `Overdue` |
+**Company** (`App\Company\…`): `Company` (aggregate root), `TaxStatus` enum, `CompanyRepositoryInterface` → `DoctrineCompanyRepository`
 
-### Repository interfaces and implementations
+**CreditRequest** (`App\CreditRequest\…`): `CreditRequest` (owned by Company), `CreditRequestStatus` enum, `Installment`, `InstallmentStatus` enum
 
-| Interface | Implementation |
-|---|---|
-| `CompanyRepositoryInterface` | `DoctrineCompanyRepository` |
+Cross-module references use explicit `use` imports (e.g. `CreditRequest` references `App\Company\Domain\Model\Company`).
 
-**Key constraint:** Domain models (`src/Domain/Model/`) are excluded from Symfony's service container (see `config/services.yaml`). They must stay free of framework annotations and constructor injection.
+### Key constraints
 
-**ORM mapping:** Doctrine uses XML mapping files in `src/Infrastructure/Persistence/Doctrine/Mapping/`. Entity classes live in `Domain/Model/` but are mapped via XML — no `#[ORM\...]` attributes on domain classes.
-
-**Repository binding:** Interface → implementation wiring is done explicitly in `config/services.yaml` under the `# Repository interface → implementation bindings` section.
-
-**ID strategy:** Entity IDs use `strategy="NONE"` — the caller is responsible for generating UUIDs (use `symfony/uid`).
-
-**Routing:** `config/routes.yaml` auto-discovers routes from PHP attributes on controllers under the `App\UI\Api\Controller` namespace.
+- **Domain models excluded from container:** each module's `Domain/Model/` is excluded in `config/services.yaml`. No framework annotations or DI on domain classes.
+- **ORM mapping:** XML files in `{Module}/Infrastructure/Persistence/Doctrine/Mapping/`. Doctrine config in `doctrine.yaml` has one mapping entry per module. No `#[ORM\…]` on entities.
+- **Repository binding:** explicit alias in `config/services.yaml` under `# Repository interface → implementation bindings`.
+- **ID strategy:** `strategy="NONE"` — caller generates UUIDs via `symfony/uid`.
+- **Routing:** `config/routes.yaml` has one entry per module pointing to its `UI/Api/Controller/`.
 
 ## Testing Layout
 
 | Suite | Directory | What goes there |
 |---|---|---|
-| Unit | `tests/Unit/Domain/` | Pure domain logic, no DB |
-| Integration | `tests/Integration/Infrastructure/` | Repository tests against real DB |
-| Functional | `tests/Functional/UI/` | HTTP-level tests via BrowserKit |
+| Unit | `tests/Unit/` | Pure domain logic, no DB |
+| Integration | `tests/Integration/` | Repository tests against real DB |
+| Functional | `tests/Functional/` | HTTP-level tests via BrowserKit |
 
-Integration and functional tests use `dama/doctrine-test-bundle` to wrap each test in a rolled-back transaction — no manual teardown needed. The test DB is `fintech_test` (suffixed automatically by the `when@test` Doctrine config).
+`dama/doctrine-test-bundle` wraps each test in a rolled-back transaction. Test DB: `fintech_test`.
 
 ## Adding a New Feature (typical flow)
 
-1. Add/update entity in `src/Domain/Model/`
-2. Add/update repository interface in `src/Domain/Repository/`
-3. Add XML mapping in `src/Infrastructure/Persistence/Doctrine/Mapping/`
-4. Implement repository in `src/Infrastructure/Persistence/Repository/`
+1. Add/update entity in `src/{Module}/Domain/Model/`
+2. Add/update repository interface in `src/{Module}/Domain/Repository/`
+3. Add XML mapping in `src/{Module}/Infrastructure/Persistence/Doctrine/Mapping/`
+4. Implement repository in `src/{Module}/Infrastructure/Persistence/Repository/`
 5. Bind interface → implementation in `config/services.yaml`
-6. Add use case in `src/Application/UseCase/`
-7. Add controller in `src/UI/Api/Controller/`
+6. Add use case in `src/{Module}/Application/UseCase/`
+7. Add controller in `src/{Module}/UI/Api/Controller/`; register path in `config/routes.yaml`
 8. Generate and review migration: `bin/console doctrine:migrations:diff`
