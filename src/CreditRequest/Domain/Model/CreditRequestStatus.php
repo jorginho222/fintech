@@ -6,11 +6,8 @@ namespace App\CreditRequest\Domain\Model;
 
 enum CreditRequestStatus: string
 {
-    case Draft = 'draft';
-    case ScoringPending = 'scoring_pending';
-    case ManualReview = 'manual_review';
-    case Approved = 'approved';
-    case Rejected = 'rejected';
+    case Proposal = 'proposal';
+    case ProposalExpired = 'proposal_expired';
     case Active = 'active';
     case Paid = 'paid';
 }
