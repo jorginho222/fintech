@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Domain\Exception;
 
-final class ExceededAmountException extends \DomainException
+use App\Shared\Domain\Exception\DomainHttpException;
+
+final class ExceededAmountException extends DomainHttpException
 {
     public function __construct()
     {

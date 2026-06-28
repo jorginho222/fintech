@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Application\UseCase;
 
+use App\Company\Domain\Exception\CompanyNotFoundException;
 use App\Company\Domain\Repository\CompanyRepositoryInterface;
 use App\CreditRequest\Application\DTO\CreditRequestEvaluateDto;
 use App\CreditRequest\Domain\Exception\ExceededAmountException;
@@ -19,7 +20,7 @@ final class CreditRequestEvaluator
     {
         $company = $this->companyRepository->findById($dto->companyId);
         if ($company === null) {
-            throw new \DomainException("Company not found.");
+            throw new CompanyNotFoundException();
         }
 
         $lastCuitDigit = (int) substr($company->getCuit(), -1);

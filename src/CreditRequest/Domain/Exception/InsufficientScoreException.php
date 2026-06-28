@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Domain\Exception;
 
-final class InsufficientScoreException extends \DomainException
+use App\Shared\Domain\Exception\DomainHttpException;
+
+final class InsufficientScoreException extends DomainHttpException
 {
     public function __construct()
     {

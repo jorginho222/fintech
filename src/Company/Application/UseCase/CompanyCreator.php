@@ -16,7 +16,8 @@ final class CompanyCreator
     public function execute(CompanyCreateDto $input): void
     {
         if ($this->companyRepository->findById($input->id) !== null) {
-            throw new \DomainException("Company with id '{$input->id}' already exists.");
+            // TODO: delegate to EditCompany use case
+            return;
         }
 
         $company = new Company(
