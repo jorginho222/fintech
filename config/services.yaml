@@ -15,3 +15,6 @@ services:
     # Repository interface → implementation bindings
     App\Company\Domain\Repository\CompanyRepositoryInterface:
         alias: App\Company\Infrastructure\Persistence\Repository\DoctrineCompanyRepository
+
+    App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface:
+        alias: App\CreditRequest\Infrastructure\Persistence\Repository\DoctrineCreditRequestRepository

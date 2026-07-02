@@ -42,7 +42,9 @@ final class CreditRequestEvaluatePostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(200);
         $body = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame('approved', $body['status']);
+        self::assertSame('proposal', $body['status']);
+        self::assertSame(self::EVEN_CUIT_COMPANY['id'], $body['company']['id']);
+        self::assertCount(12, $body['installments']);
     }
 
     public function testInsufficientScoreReturns422(): void

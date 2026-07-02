@@ -14,7 +14,7 @@
         <field name="taxOnInterestAmount" column="tax_on_interest_amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="totalAmount" column="total_amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="dueDate" column="due_date" type="date_immutable" nullable="false"/>
-        <field name="status" column="status" type="string" enumType="App\CreditRequest\Domain\Model\InstallmentStatus" nullable="false"/>
+        <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\InstallmentStatus" nullable="false"/>
 
         <many-to-one field="creditRequest" target-entity="App\CreditRequest\Domain\Model\CreditRequest" inversed-by="installmentCollection">
             <join-column name="credit_request_id" referenced-column-name="id" nullable="false"/>

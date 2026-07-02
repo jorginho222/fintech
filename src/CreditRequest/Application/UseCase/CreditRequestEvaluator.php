@@ -9,14 +9,18 @@ use App\Company\Domain\Repository\CompanyRepositoryInterface;
 use App\CreditRequest\Application\DTO\CreditRequestEvaluateDto;
 use App\CreditRequest\Domain\Exception\ExceededAmountException;
 use App\CreditRequest\Domain\Exception\InsufficientScoreException;
+use App\CreditRequest\Domain\Model\CreditRequest;
 
 final class CreditRequestEvaluator
 {
     private const int MAX_APPROVED_AMOUNT = 50_000_000;
 
-    public function __construct(private readonly CompanyRepositoryInterface $companyRepository) {}
+    public function __construct(
+        private readonly CompanyRepositoryInterface  $companyRepository,
+        private readonly CreditRequestCreator        $creditRequestCreator,
+    ) {}
 
-    public function execute(CreditRequestEvaluateDto $dto): void
+    public function execute(CreditRequestEvaluateDto $dto): CreditRequest
     {
         $company = $this->companyRepository->findById($dto->companyId);
         if ($company === null) {
@@ -33,6 +37,6 @@ final class CreditRequestEvaluator
             throw new ExceededAmountException();
         }
 
-        // TODO: create credit request in Draft status
+        return $this->creditRequestCreator->execute($company, $dto->amount, $dto->installmentQuantity);
     }
 }

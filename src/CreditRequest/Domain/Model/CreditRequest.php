@@ -17,6 +17,7 @@ class CreditRequest
         private string              $id,
         private string              $totalAmount,
         private string              $nominalInterestRate,
+        private int                 $installmentQuantity,
         private Company             $company,
         private CreditRequestStatus $status,
     )
@@ -38,6 +39,11 @@ class CreditRequest
     public function getNominalInterestRate(): string
     {
         return $this->nominalInterestRate;
+    }
+
+    public function getInstallmentQuantity(): int
+    {
+        return $this->installmentQuantity;
     }
 
     public function getCompany(): Company
