@@ -7,6 +7,20 @@ services:
       - .:/var/www/html
     environment:
       - APP_ENV=dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    command: bin/console messenger:consume scheduler_credit_request -vv
+    volumes:
+      - .:/var/www/html
+    environment:
+      - APP_ENV=dev
     depends_on:
       - postgres
 

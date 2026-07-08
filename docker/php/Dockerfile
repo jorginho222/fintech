@@ -9,10 +9,15 @@ RUN apk add --no-cache \
         zip \
         intl \
         opcache \
-        bcmath
+        bcmath \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers \
+    && pecl install xdebug \
+    && docker-php-ext-enable xdebug \
+    && apk del .build-deps
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
 COPY docker/php/php.ini /usr/local/etc/php/conf.d/custom.ini
+COPY docker/php/xdebug.ini /usr/local/etc/php/conf.d/xdebug.ini
