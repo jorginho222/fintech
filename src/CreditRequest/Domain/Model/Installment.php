@@ -6,6 +6,8 @@ namespace App\CreditRequest\Domain\Model;
 
 class Installment
 {
+    private ?\DateTimeImmutable $dueDate;
+
     public function __construct(
         private string $id,
         private int $periodNumber,
@@ -13,10 +15,11 @@ class Installment
         private string $interestAmount,
         private string $taxOnInterestAmount,
         private string $totalAmount,
-        private \DateTimeImmutable $dueDate,
         private InstallmentStatus $status,
         private CreditRequest $creditRequest,
-    ) {}
+    ) {
+        $this->dueDate = null;
+    }
 
     public function getId(): string
     {
@@ -48,7 +51,7 @@ class Installment
         return $this->totalAmount;
     }
 
-    public function getDueDate(): \DateTimeImmutable
+    public function getDueDate(): ?\DateTimeImmutable
     {
         return $this->dueDate;
     }

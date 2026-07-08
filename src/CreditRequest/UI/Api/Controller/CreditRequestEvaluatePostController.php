@@ -37,6 +37,7 @@ final class CreditRequestEvaluatePostController
         return [
             'id' => $creditRequest->getId(),
             'status' => $creditRequest->getStatus()->value,
+            'approvalLimitDate' => $creditRequest->getApprovalLimitDate()->format('d/m/y'),
             'totalAmount' => $creditRequest->getTotalAmount(),
             'nominalInterestRate' => $creditRequest->getNominalInterestRate(),
             'installmentQuantity' => $creditRequest->getInstallmentQuantity(),
@@ -56,7 +57,7 @@ final class CreditRequestEvaluatePostController
                     'interestAmount' => $installment->getInterestAmount(),
                     'taxOnInterestAmount' => $installment->getTaxOnInterestAmount(),
                     'totalAmount' => $installment->getTotalAmount(),
-                    'dueDate' => $installment->getDueDate()->format(\DateTimeInterface::ATOM),
+                    'dueDate' => $installment->getDueDate()?->format(\DateTimeInterface::ATOM),
                     'status' => $installment->getStatus()->value,
                 ],
                 $creditRequest->getInstallmentCollection()->toArray(),

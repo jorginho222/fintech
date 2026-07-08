@@ -36,7 +36,6 @@ final class CreditRequestCreator
         $installmentDtos = $this->installmentCalculator->calculate(
             (string) $amount,
             $installmentQuantity,
-            $creditRequest->getCreatedAt(),
         );
 
         foreach ($installmentDtos as $installmentDto) {
@@ -47,7 +46,6 @@ final class CreditRequestCreator
                 $installmentDto->interestAmount,
                 $installmentDto->taxOnInterestAmount,
                 $installmentDto->totalAmount,
-                $installmentDto->dueDate,
                 InstallmentStatus::Pending,
                 $creditRequest,
             ));

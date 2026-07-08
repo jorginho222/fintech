@@ -12,6 +12,5 @@ final class InstallmentCreateDto
         public readonly string $interestAmount,
         public readonly string $taxOnInterestAmount,
         public readonly string $totalAmount,
-        public readonly \DateTimeImmutable $dueDate,
     ) {}
 }

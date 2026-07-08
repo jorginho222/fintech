@@ -10,8 +10,11 @@ use Doctrine\Common\Collections\Collection;
 
 class CreditRequest
 {
+    private const int APPROVAL_LIMIT_DAYS = 3;
+
     private Collection $installmentCollection;
     private \DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $approvalLimitDate;
 
     public function __construct(
         private string              $id,
@@ -24,6 +27,7 @@ class CreditRequest
     {
         $this->installmentCollection = new ArrayCollection();
         $this->createdAt = new \DateTimeImmutable();
+        $this->approvalLimitDate = $this->createdAt->modify(sprintf('+%d days', self::APPROVAL_LIMIT_DAYS));
     }
 
     public function getId(): string
@@ -61,6 +65,11 @@ class CreditRequest
         return $this->createdAt;
     }
 
+    public function getApprovalLimitDate(): \DateTimeImmutable
+    {
+        return $this->approvalLimitDate;
+    }
+
     public function getInstallmentCollection(): Collection
     {
         return $this->installmentCollection;
@@ -69,6 +78,20 @@ class CreditRequest
     public function changeStatus(CreditRequestStatus $status): void
     {
         $this->status = $status;
+    }
+
+    public function isExpired(\DateTimeImmutable $now): bool
+    {
+        return $this->status === CreditRequestStatus::Proposal && $now > $this->approvalLimitDate;
+    }
+
+    public function expire(): void
+    {
+        if ($this->status !== CreditRequestStatus::Proposal) {
+            return;
+        }
+
+        $this->status = CreditRequestStatus::ProposalExpired;
     }
 
     public function addInstallment(Installment $installment): void

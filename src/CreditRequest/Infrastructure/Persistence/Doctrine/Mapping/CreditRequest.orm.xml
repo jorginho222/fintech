@@ -13,6 +13,7 @@
         <field name="installmentQuantity" column="installment_quantity" type="integer" nullable="false"/>
         <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\CreditRequestStatus" nullable="false"/>
         <field name="createdAt" column="created_at" type="datetime_immutable" nullable="false"/>
+        <field name="approvalLimitDate" column="approval_limit_date" type="datetime_immutable" nullable="false"/>
 
         <many-to-one field="company" target-entity="App\Company\Domain\Model\Company" inversed-by="creditRequestCollection">
             <join-column name="company_id" referenced-column-name="id" nullable="false"/>

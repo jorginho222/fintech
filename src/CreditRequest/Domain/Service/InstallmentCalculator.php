@@ -14,7 +14,7 @@ final class InstallmentCalculator
     /**
      * @return list<InstallmentCreateDto>
      */
-    public function calculate(string $requestedAmount, int $termMonths, \DateTimeImmutable $startDate): array
+    public function calculate(string $requestedAmount, int $termMonths): array
     {
         $monthlyRate = bcdiv(self::ANNUAL_RATE, '12', self::CALC_SCALE);
 
@@ -58,7 +58,6 @@ final class InstallmentCalculator
                 $interestAmount,
                 $taxOnInterestAmount,
                 $totalAmount,
-                $startDate->modify("+{$t} months"),
             );
         }
 
