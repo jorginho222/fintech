@@ -6,6 +6,7 @@ namespace App\Tests\Unit\CreditRequest\Domain\Model;
 
 use App\Company\Domain\Model\Company;
 use App\Company\Domain\Model\TaxStatus;
+use App\CreditRequest\Domain\Exception\CreditRequestNotActivableException;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use PHPUnit\Framework\TestCase;
@@ -37,6 +38,25 @@ final class CreditRequestTest extends TestCase
         $creditRequest->expire();
 
         self::assertSame(CreditRequestStatus::ProposalExpired, $creditRequest->getStatus());
+    }
+
+    public function testActivateChangesStatusFromProposalToActive(): void
+    {
+        $creditRequest = $this->createCreditRequest();
+
+        $creditRequest->activate();
+
+        self::assertSame(CreditRequestStatus::Active, $creditRequest->getStatus());
+    }
+
+    public function testActivateThrowsWhenStatusIsNotProposal(): void
+    {
+        $creditRequest = $this->createCreditRequest();
+        $creditRequest->activate();
+
+        $this->expectException(CreditRequestNotActivableException::class);
+
+        $creditRequest->activate();
     }
 
     private function createCreditRequest(): CreditRequest

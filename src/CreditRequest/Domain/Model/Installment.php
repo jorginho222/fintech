@@ -70,4 +70,9 @@ class Installment
     {
         $this->status = $status;
     }
+
+    public function changeDueDate(\DateTimeImmutable $dueDate): void
+    {
+        $this->dueDate = $dueDate;
+    }
 }

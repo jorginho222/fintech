@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\CreditRequest\Domain\Model;
 
 use App\Company\Domain\Model\Company;
+use App\CreditRequest\Domain\Exception\CreditRequestNotActivableException;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
@@ -92,6 +93,15 @@ class CreditRequest
         }
 
         $this->status = CreditRequestStatus::ProposalExpired;
+    }
+
+    public function activate(): void
+    {
+        if ($this->status !== CreditRequestStatus::Proposal) {
+            throw new CreditRequestNotActivableException();
+        }
+
+        $this->status = CreditRequestStatus::Active;
     }
 
     public function addInstallment(Installment $installment): void
