@@ -6,6 +6,7 @@ namespace App\CreditRequest\Infrastructure\Persistence\Repository;
 
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
+use App\CreditRequest\Domain\Model\Installment;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,10 +42,8 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
     public function findWithOverdueInstallments(\DateTimeImmutable $now): array
     {
         return $this->em->createQueryBuilder()
-            ->select('creditRequest')
-            ->distinct()
-            ->from(CreditRequest::class, 'creditRequest')
-            ->join('creditRequest.installmentCollection', 'installment')
+            ->select('installment')
+            ->from(Installment::class, 'installment')
             ->where('installment.status = :status')
             ->andWhere('installment.dueDate < :now')
             ->setParameter('status', InstallmentStatus::Pending)

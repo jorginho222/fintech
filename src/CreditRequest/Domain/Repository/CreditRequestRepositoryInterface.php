@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\CreditRequest\Domain\Repository;
 
 use App\CreditRequest\Domain\Model\CreditRequest;
+use App\CreditRequest\Domain\Model\Installment;
 
 interface CreditRequestRepositoryInterface
 {
@@ -18,7 +19,7 @@ interface CreditRequestRepositoryInterface
     public function findExpiredProposals(\DateTimeImmutable $now): array;
 
     /**
-     * @return CreditRequest[]
+     * @return Installment[]
      */
     public function findWithOverdueInstallments(\DateTimeImmutable $now): array;
 }

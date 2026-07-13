@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Application\UseCase;
 
-use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
 
 final class InstallmentOverdueMarker
@@ -15,27 +14,13 @@ final class InstallmentOverdueMarker
 
     public function execute(\DateTimeImmutable $now): int
     {
-        $creditRequestsWithOverdueInstallments = $this->creditRequestRepository->findWithOverdueInstallments($now);
+        $overdueInstallments = $this->creditRequestRepository->findWithOverdueInstallments($now);
 
-        $markedCount = 0;
-        foreach ($creditRequestsWithOverdueInstallments as $creditRequest) {
-            foreach ($creditRequest->getInstallmentCollection() as $installment) {
-                if ($installment->getStatus() !== InstallmentStatus::Pending) {
-                    continue;
-                }
-
-                $dueDate = $installment->getDueDate();
-                if ($dueDate === null || $dueDate >= $now) {
-                    continue;
-                }
-
-                $installment->markOverdue();
-                $markedCount++;
-            }
-
-            $this->creditRequestRepository->save($creditRequest);
+        foreach ($overdueInstallments as $installment) {
+            $installment->markOverdue();
+            $this->creditRequestRepository->save($installment->getCreditRequest());
         }
 
-        return $markedCount;
+        return count($overdueInstallments);
     }
 }
