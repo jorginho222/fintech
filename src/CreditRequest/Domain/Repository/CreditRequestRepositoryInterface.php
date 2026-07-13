@@ -16,4 +16,9 @@ interface CreditRequestRepositoryInterface
      * @return CreditRequest[]
      */
     public function findExpiredProposals(\DateTimeImmutable $now): array;
+
+    /**
+     * @return CreditRequest[]
+     */
+    public function findWithOverdueInstallments(\DateTimeImmutable $now): array;
 }

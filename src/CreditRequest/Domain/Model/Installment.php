@@ -71,6 +71,15 @@ class Installment
         $this->status = $status;
     }
 
+    public function markOverdue(): void
+    {
+        if ($this->status !== InstallmentStatus::Pending) {
+            return;
+        }
+
+        $this->status = InstallmentStatus::Overdue;
+    }
+
     public function changeDueDate(\DateTimeImmutable $dueDate): void
     {
         $this->dueDate = $dueDate;
