@@ -11,6 +11,8 @@ interface CreditRequestRepositoryInterface
 {
     public function save(CreditRequest $creditRequest): void;
 
+    public function saveInstallment(Installment $installment): void;
+
     public function findById(string $id): ?CreditRequest;
 
     /**

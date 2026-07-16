@@ -21,6 +21,12 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         $this->em->flush();
     }
 
+    public function saveInstallment(Installment $installment): void
+    {
+        $this->em->persist($installment);
+        $this->em->flush();
+    }
+
     public function findById(string $id): ?CreditRequest
     {
         return $this->em->find(CreditRequest::class, $id);

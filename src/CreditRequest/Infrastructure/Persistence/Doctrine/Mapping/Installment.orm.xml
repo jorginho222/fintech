@@ -13,7 +13,18 @@
         <field name="interestAmount" column="interest_amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="taxOnInterestAmount" column="tax_on_interest_amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="totalAmount" column="total_amount" type="decimal" precision="14" scale="4" nullable="false"/>
+        <field name="penaltyInterestAmount" column="penalty_interest_amount" type="decimal" precision="14" scale="4" nullable="false">
+            <options>
+                <option name="default">0</option>
+            </options>
+        </field>
+        <field name="penaltyIva21Tax" column="penalty_iva21_tax" type="decimal" precision="14" scale="4" nullable="false">
+            <options>
+                <option name="default">0</option>
+            </options>
+        </field>
         <field name="dueDate" column="due_date" type="date_immutable" nullable="true"/>
+        <field name="lastPenaltyCalculationAt" column="last_penalty_calculation_at" type="datetime_immutable" nullable="true"/>
         <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\InstallmentStatus" nullable="false"/>
 
         <many-to-one field="creditRequest" target-entity="App\CreditRequest\Domain\Model\CreditRequest" inversed-by="installmentCollection">
