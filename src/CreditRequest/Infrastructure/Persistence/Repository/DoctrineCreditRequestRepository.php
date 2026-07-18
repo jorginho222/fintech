@@ -21,6 +21,12 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         $this->em->flush();
     }
 
+    public function delete(CreditRequest $creditRequest): void
+    {
+        $this->em->remove($creditRequest);
+        $this->em->flush();
+    }
+
     public function saveInstallment(Installment $installment): void
     {
         $this->em->persist($installment);
@@ -46,6 +52,19 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
             ->andWhere('creditRequest.approvalLimitDate < :now')
             ->setParameter('status', CreditRequestStatus::Proposal)
             ->setParameter('now', $now)
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findExpiredProposalsForDeletion(\DateTimeImmutable $before): array
+    {
+        return $this->em->createQueryBuilder()
+            ->select('creditRequest')
+            ->from(CreditRequest::class, 'creditRequest')
+            ->where('creditRequest.status = :status')
+            ->andWhere('creditRequest.approvalLimitDate < :before')
+            ->setParameter('status', CreditRequestStatus::ProposalExpired)
+            ->setParameter('before', $before)
             ->getQuery()
             ->getResult();
     }

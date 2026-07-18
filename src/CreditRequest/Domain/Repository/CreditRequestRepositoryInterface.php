@@ -11,6 +11,8 @@ interface CreditRequestRepositoryInterface
 {
     public function save(CreditRequest $creditRequest): void;
 
+    public function delete(CreditRequest $creditRequest): void;
+
     public function saveInstallment(Installment $installment): void;
 
     public function findById(string $id): ?CreditRequest;
@@ -21,6 +23,11 @@ interface CreditRequestRepositoryInterface
      * @return CreditRequest[]
      */
     public function findExpiredProposals(\DateTimeImmutable $now): array;
+
+    /**
+     * @return CreditRequest[]
+     */
+    public function findExpiredProposalsForDeletion(\DateTimeImmutable $before): array;
 
     /**
      * @return Installment[]

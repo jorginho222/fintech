@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Infrastructure\Scheduler;
 
+use App\CreditRequest\Application\Message\DeleteExpiredCreditRequestProposalsMessage;
 use App\CreditRequest\Application\Message\ExpireCreditRequestProposalsMessage;
 use App\CreditRequest\Application\Message\MarkOverdueInstallmentsMessage;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
@@ -18,6 +19,7 @@ final class CreditRequestSchedule implements ScheduleProviderInterface
     {
         return (new Schedule())
             ->add(RecurringMessage::every('1 day', new ExpireCreditRequestProposalsMessage()))
-            ->add(RecurringMessage::every('1 day', new MarkOverdueInstallmentsMessage()));
+            ->add(RecurringMessage::every('1 day', new MarkOverdueInstallmentsMessage()))
+            ->add(RecurringMessage::every('1 day', new DeleteExpiredCreditRequestProposalsMessage()));
     }
 }

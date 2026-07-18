@@ -22,6 +22,7 @@
         <one-to-many field="installmentCollection" target-entity="App\CreditRequest\Domain\Model\Installment" mapped-by="creditRequest">
             <cascade>
                 <cascade-persist/>
+                <cascade-remove/>
             </cascade>
         </one-to-many>
     </entity>
