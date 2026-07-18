@@ -18,3 +18,6 @@ services:
 
     App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface:
         alias: App\CreditRequest\Infrastructure\Persistence\Repository\DoctrineCreditRequestRepository
+
+    App\Shared\Domain\Service\TransactionManagerInterface:
+        alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager

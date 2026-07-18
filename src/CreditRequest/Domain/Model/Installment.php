@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\Domain\Model;
 
+use App\CreditRequest\Domain\Exception\InstallmentAlreadyPaidException;
+
 class Installment
 {
     private ?\DateTimeImmutable $dueDate;
@@ -91,6 +93,15 @@ class Installment
     public function changeStatus(InstallmentStatus $status): void
     {
         $this->status = $status;
+    }
+
+    public function pay(): void
+    {
+        if ($this->status === InstallmentStatus::Paid) {
+            throw new InstallmentAlreadyPaidException();
+        }
+
+        $this->status = InstallmentStatus::Paid;
     }
 
     public function markOverdue(): void

@@ -15,6 +15,8 @@ interface CreditRequestRepositoryInterface
 
     public function findById(string $id): ?CreditRequest;
 
+    public function findInstallmentById(string $id): ?Installment;
+
     /**
      * @return CreditRequest[]
      */
