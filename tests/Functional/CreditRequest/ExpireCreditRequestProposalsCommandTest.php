@@ -11,10 +11,13 @@ use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use Symfony\Bundle\FrameworkBundle\Test\MailerAssertionsTrait;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class ExpireCreditRequestProposalsCommandTest extends KernelTestCase
 {
+    use MailerAssertionsTrait;
+
     public function testExpiresProposalsPastTheirApprovalLimitDate(): void
     {
         self::bootKernel();
@@ -57,5 +60,10 @@ final class ExpireCreditRequestProposalsCommandTest extends KernelTestCase
 
         $refreshedCreditRequest = $em->find(CreditRequest::class, $expiredCreditRequest->getId());
         self::assertSame(CreditRequestStatus::ProposalExpired, $refreshedCreditRequest->getStatus());
+
+        self::assertEmailCount(1);
+        $email = self::getMailerMessage();
+        self::assertEmailAddressContains($email, 'To', 'empresa@example.com');
+        self::assertEmailTextBodyContains($email, 'Empresa SRL');
     }
 }
