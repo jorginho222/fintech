@@ -9,7 +9,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-final class CreditRequestEvaluateDto
+final class CreditRequestApplyDto
 {
     #[Assert\NotBlank]
     #[Assert\Uuid(versions: [4])]

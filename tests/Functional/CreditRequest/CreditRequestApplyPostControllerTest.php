@@ -6,9 +6,9 @@ namespace App\Tests\Functional\CreditRequest;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-final class CreditRequestEvaluatePostControllerTest extends WebTestCase
+final class CreditRequestApplyPostControllerTest extends WebTestCase
 {
-    private const string EVALUATE_URL = '/api/credit-request/evaluate';
+    private const string APPLY_URL    = '/api/credit-request/apply';
     private const string COMPANY_URL  = '/api/company';
 
     // last digit 0 → even → passes score check
@@ -34,7 +34,7 @@ final class CreditRequestEvaluatePostControllerTest extends WebTestCase
         $client = static::createClient();
         $client->jsonRequest('POST', self::COMPANY_URL, self::EVEN_CUIT_COMPANY);
 
-        $client->jsonRequest('POST', self::EVALUATE_URL, [
+        $client->jsonRequest('POST', self::APPLY_URL, [
             'companyId'           => self::EVEN_CUIT_COMPANY['id'],
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
@@ -52,7 +52,7 @@ final class CreditRequestEvaluatePostControllerTest extends WebTestCase
         $client = static::createClient();
         $client->jsonRequest('POST', self::COMPANY_URL, self::ODD_CUIT_COMPANY);
 
-        $client->jsonRequest('POST', self::EVALUATE_URL, [
+        $client->jsonRequest('POST', self::APPLY_URL, [
             'companyId'           => self::ODD_CUIT_COMPANY['id'],
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
@@ -68,7 +68,7 @@ final class CreditRequestEvaluatePostControllerTest extends WebTestCase
         $client = static::createClient();
         $client->jsonRequest('POST', self::COMPANY_URL, self::EVEN_CUIT_COMPANY);
 
-        $client->jsonRequest('POST', self::EVALUATE_URL, [
+        $client->jsonRequest('POST', self::APPLY_URL, [
             'companyId'           => self::EVEN_CUIT_COMPANY['id'],
             'amount'              => 50_000_001,
             'installmentQuantity' => 12,

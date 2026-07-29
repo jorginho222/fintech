@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Company\Domain\Model;
 
 use App\CreditRequest\Domain\Model\CreditRequest;
+use App\CreditRequest\Domain\Model\CreditRequestApplication;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 
 class Company
 {
     private Collection $creditRequestCollection;
+    private Collection $creditRequestApplicationCollection;
 
     public function __construct(
         private string $id,
@@ -26,6 +28,7 @@ class Company
             throw new \InvalidArgumentException('Invalid email address.');
         }
         $this->creditRequestCollection = new ArrayCollection();
+        $this->creditRequestApplicationCollection = new ArrayCollection();
     }
 
     public function getId(): string
@@ -80,6 +83,18 @@ class Company
     {
         if (!$this->creditRequestCollection->contains($creditRequest)) {
             $this->creditRequestCollection->add($creditRequest);
+        }
+    }
+
+    public function getCreditRequestApplicationCollection(): Collection
+    {
+        return $this->creditRequestApplicationCollection;
+    }
+
+    public function addCreditRequestApplication(CreditRequestApplication $creditRequestApplication): void
+    {
+        if (!$this->creditRequestApplicationCollection->contains($creditRequestApplication)) {
+            $this->creditRequestApplicationCollection->add($creditRequestApplication);
         }
     }
 }

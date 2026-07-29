@@ -6,12 +6,12 @@ namespace App\CreditRequest\Application\UseCase;
 
 use App\Company\Domain\Exception\CompanyNotFoundException;
 use App\Company\Domain\Repository\CompanyRepositoryInterface;
-use App\CreditRequest\Application\DTO\CreditRequestEvaluateDto;
+use App\CreditRequest\Application\DTO\CreditRequestApplyDto;
 use App\CreditRequest\Domain\Exception\ExceededAmountException;
 use App\CreditRequest\Domain\Exception\InsufficientScoreException;
 use App\CreditRequest\Domain\Model\CreditRequest;
 
-final class CreditRequestEvaluator
+final class CreditRequestApplicationService
 {
     private const int MAX_APPROVED_AMOUNT = 50_000_000;
 
@@ -20,7 +20,7 @@ final class CreditRequestEvaluator
         private readonly CreditRequestCreator        $creditRequestCreator,
     ) {}
 
-    public function execute(CreditRequestEvaluateDto $dto): CreditRequest
+    public function execute(CreditRequestApplyDto $dto): CreditRequest
     {
         $company = $this->companyRepository->findById($dto->companyId);
         if ($company === null) {

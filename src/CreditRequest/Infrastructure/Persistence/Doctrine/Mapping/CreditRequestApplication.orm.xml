@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\CreditRequest\Domain\Model\CreditRequestApplication" table="credit_request_applications">
+        <id name="id" type="string" column="id">
+            <generator strategy="NONE"/>
+        </id>
+        <field name="amount" column="amount" type="decimal" precision="14" scale="4" nullable="false"/>
+        <field name="installmentQuantity" column="installment_quantity" type="integer" nullable="false"/>
+        <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\CreditRequestApplicationStatus" nullable="false"/>
+
+        <many-to-one field="company" target-entity="App\Company\Domain\Model\Company" inversed-by="creditRequestApplicationCollection">
+            <join-column name="company_id" referenced-column-name="id" nullable="false"/>
+        </many-to-one>
+
+        <many-to-one field="creditRequest" target-entity="App\CreditRequest\Domain\Model\CreditRequest">
+            <join-column name="credit_request_id" referenced-column-name="id" nullable="true"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>
