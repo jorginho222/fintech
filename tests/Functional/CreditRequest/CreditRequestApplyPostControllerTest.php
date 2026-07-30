@@ -11,71 +11,30 @@ final class CreditRequestApplyPostControllerTest extends WebTestCase
     private const string APPLY_URL    = '/api/credit-request/apply';
     private const string COMPANY_URL  = '/api/company';
 
-    // last digit 0 → even → passes score check
-    private const array EVEN_CUIT_COMPANY = [
+    private const array COMPANY = [
         'id'           => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
-        'socialReason' => 'Empresa Par SRL',
+        'socialReason' => 'Empresa SRL',
         'cuit'         => '20123456780',
-        'email'        => 'par@empresa.com',
+        'email'        => 'empresa@empresa.com',
         'taxStatus'    => 'monotributo',
     ];
 
-    // last digit 1 → odd → fails score check
-    private const array ODD_CUIT_COMPANY = [
-        'id'           => 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
-        'socialReason' => 'Empresa Impar SRL',
-        'cuit'         => '20123456781',
-        'email'        => 'impar@empresa.com',
-        'taxStatus'    => 'monotributo',
-    ];
-
-    public function testApprovedReturns200(): void
+    public function testApplyReturns201WithPendingApplication(): void
     {
         $client = static::createClient();
-        $client->jsonRequest('POST', self::COMPANY_URL, self::EVEN_CUIT_COMPANY);
+        $client->jsonRequest('POST', self::COMPANY_URL, self::COMPANY);
 
         $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => self::EVEN_CUIT_COMPANY['id'],
+            'companyId'           => self::COMPANY['id'],
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ]);
 
-        self::assertResponseStatusCodeSame(200);
+        self::assertResponseStatusCodeSame(201);
         $body = json_decode($client->getResponse()->getContent(), true);
-        self::assertSame('proposal', $body['status']);
-        self::assertSame(self::EVEN_CUIT_COMPANY['id'], $body['company']['id']);
-        self::assertCount(12, $body['installments']);
-    }
-
-    public function testInsufficientScoreReturns422(): void
-    {
-        $client = static::createClient();
-        $client->jsonRequest('POST', self::COMPANY_URL, self::ODD_CUIT_COMPANY);
-
-        $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => self::ODD_CUIT_COMPANY['id'],
-            'amount'              => 10_000_000,
-            'installmentQuantity' => 12,
-        ]);
-
-        self::assertResponseStatusCodeSame(422);
-        $body = json_decode($client->getResponse()->getContent(), true);
-        self::assertArrayHasKey('error', $body);
-    }
-
-    public function testExceededAmountReturns422(): void
-    {
-        $client = static::createClient();
-        $client->jsonRequest('POST', self::COMPANY_URL, self::EVEN_CUIT_COMPANY);
-
-        $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => self::EVEN_CUIT_COMPANY['id'],
-            'amount'              => 50_000_001,
-            'installmentQuantity' => 12,
-        ]);
-
-        self::assertResponseStatusCodeSame(422);
-        $body = json_decode($client->getResponse()->getContent(), true);
-        self::assertArrayHasKey('error', $body);
+        self::assertSame('evaluation_pending', $body['status']);
+        self::assertSame(self::COMPANY['id'], $body['company']['id']);
+        self::assertSame(10_000_000, (int) $body['amount']);
+        self::assertSame(12, $body['installmentQuantity']);
     }
 }

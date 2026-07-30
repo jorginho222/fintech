@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\CreditRequest\UI\Api\Controller;
 
 use App\CreditRequest\Application\DTO\CreditRequestApplyDto;
-use App\CreditRequest\Application\UseCase\CreditRequestApplicationService;
-use App\CreditRequest\UI\Api\Serializer\CreditRequestSerializer;
+use App\CreditRequest\Application\UseCase\CreditRequestApplicationHandler;
+use App\CreditRequest\UI\Api\Serializer\CreditRequestApplicationSerializer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,9 +16,9 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 final class CreditRequestApplyPostController
 {
     public function __construct(
-        private readonly CreditRequestApplicationService $creditRequestApplicationService,
-        private readonly ValidatorInterface      $validator,
-        private readonly CreditRequestSerializer $creditRequestSerializer,
+        private readonly CreditRequestApplicationHandler    $creditRequestApplicationHandler,
+        private readonly ValidatorInterface                 $validator,
+        private readonly CreditRequestApplicationSerializer $creditRequestApplicationSerializer,
     )
     {
     }
@@ -27,8 +27,8 @@ final class CreditRequestApplyPostController
     public function __invoke(Request $request): JsonResponse
     {
         $input = new CreditRequestApplyDto($request, $this->validator);
-        $creditRequest = $this->creditRequestApplicationService->execute($input);
+        $creditRequestApplication = $this->creditRequestApplicationHandler->execute($input);
 
-        return new JsonResponse($this->creditRequestSerializer->serialize($creditRequest), Response::HTTP_OK);
+        return new JsonResponse($this->creditRequestApplicationSerializer->serialize($creditRequestApplication), Response::HTTP_CREATED);
     }
 }

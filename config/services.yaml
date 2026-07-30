@@ -20,6 +20,9 @@ services:
     App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface:
         alias: App\CreditRequest\Infrastructure\Persistence\Repository\DoctrineCreditRequestRepository
 
+    App\CreditRequest\Domain\Repository\CreditRequestApplicationRepositoryInterface:
+        alias: App\CreditRequest\Infrastructure\Persistence\Repository\DoctrineCreditRequestApplicationRepository
+
     App\CreditRequest\Domain\Service\CreditRequestProposalExpirationNotifierInterface:
         alias: App\CreditRequest\Infrastructure\Service\CreditRequestProposalExpirationMailer
 
