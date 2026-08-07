@@ -19,7 +19,7 @@ final class InstallmentCalculatorTest extends TestCase
 
     public function testSinglePeriodInstallmentAbsorbsFullPrincipalAndInterest(): void
     {
-        $installments = $this->calculator->calculate('100000', 1);
+        $installments = $this->calculator->calculate('100000', 1, '0.60');
 
         self::assertCount(1, $installments);
 
@@ -35,7 +35,7 @@ final class InstallmentCalculatorTest extends TestCase
     {
         // Reference values independently computed with the documented French
         // amortization formula (amount=100000, i=5% monthly, IVA=21%).
-        $installments = $this->calculator->calculate('100000', 2);
+        $installments = $this->calculator->calculate('100000', 2, '0.60');
 
         self::assertCount(2, $installments);
 
@@ -56,7 +56,7 @@ final class InstallmentCalculatorTest extends TestCase
 
     public function testFirstPeriodInterestIsAlwaysComputedOverTheFullRequestedAmount(): void
     {
-        $installments = $this->calculator->calculate('200000', 6);
+        $installments = $this->calculator->calculate('200000', 6, '0.60');
 
         // interest_1 = requestedAmount * monthlyRate = 200000 * 0.05, independent of the term
         self::assertSame('10000.00', $installments[0]->interestAmount);
@@ -66,7 +66,7 @@ final class InstallmentCalculatorTest extends TestCase
     public function testCapitalAmountsAddUpToTheRequestedAmount(): void
     {
         $requestedAmount = '150000';
-        $installments = $this->calculator->calculate($requestedAmount, 12);
+        $installments = $this->calculator->calculate($requestedAmount, 12, '0.60');
 
         $capitalSum = array_reduce(
             $installments,
@@ -79,7 +79,7 @@ final class InstallmentCalculatorTest extends TestCase
 
     public function testReturnsOnePeriodPerRequestedTermInSequentialOrder(): void
     {
-        $installments = $this->calculator->calculate('100000', 12);
+        $installments = $this->calculator->calculate('100000', 12, '0.60');
 
         self::assertCount(12, $installments);
         foreach ($installments as $index => $installment) {
@@ -89,7 +89,7 @@ final class InstallmentCalculatorTest extends TestCase
 
     public function testTotalAmountIsTheSumOfItsComponents(): void
     {
-        $installments = $this->calculator->calculate('100000', 12);
+        $installments = $this->calculator->calculate('100000', 12, '0.60');
 
         foreach ($installments as $installment) {
             $expectedTotal = bcadd(

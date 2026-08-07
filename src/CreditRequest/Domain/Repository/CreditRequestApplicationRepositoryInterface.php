@@ -9,4 +9,6 @@ use App\CreditRequest\Domain\Model\CreditRequestApplication;
 interface CreditRequestApplicationRepositoryInterface
 {
     public function save(CreditRequestApplication $creditRequestApplication): void;
+
+    public function findById(string $id): ?CreditRequestApplication;
 }

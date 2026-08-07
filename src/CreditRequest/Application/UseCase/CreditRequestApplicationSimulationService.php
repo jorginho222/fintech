@@ -5,13 +5,21 @@ declare(strict_types=1);
 namespace App\CreditRequest\Application\UseCase;
 
 use App\CreditRequest\Domain\Model\CreditRequestApplication;
+use App\CreditRequest\Domain\Service\CreditRequestApplicationWebhookClientInterface;
 
 final class CreditRequestApplicationSimulationService
 {
+    public function __construct(
+        private readonly CreditRequestApplicationWebhookClientInterface $creditRequestApplicationWebhookClient,
+    ) {
+    }
+
     public function execute(CreditRequestApplication $creditRequestApplication): void
     {
-        // TODO: call the webhook service to simulate the credit bureau response
-        // (insufficient score, exceeded amount, etc.) and update the
-        // CreditRequestApplication status accordingly.
+        $this->creditRequestApplicationWebhookClient->sendRequest(
+            $creditRequestApplication->getId(),
+            $creditRequestApplication->getCompany()->getCuit(),
+            $creditRequestApplication->getAmount(),
+        );
     }
 }

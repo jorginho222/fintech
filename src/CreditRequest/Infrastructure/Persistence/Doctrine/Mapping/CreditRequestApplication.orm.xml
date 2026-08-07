@@ -11,6 +11,7 @@
         <field name="amount" column="amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="installmentQuantity" column="installment_quantity" type="integer" nullable="false"/>
         <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\CreditRequestApplicationStatus" nullable="false"/>
+        <field name="rejectionReason" column="rejection_reason" type="string" nullable="true"/>
 
         <many-to-one field="company" target-entity="App\Company\Domain\Model\Company" inversed-by="creditRequestApplicationCollection">
             <join-column name="company_id" referenced-column-name="id" nullable="false"/>

@@ -13,6 +13,7 @@ class Company
 {
     private Collection $creditRequestCollection;
     private Collection $creditRequestApplicationCollection;
+    private ?int $score;
 
     public function __construct(
         private string $id,
@@ -29,6 +30,7 @@ class Company
         }
         $this->creditRequestCollection = new ArrayCollection();
         $this->creditRequestApplicationCollection = new ArrayCollection();
+        $this->score = null;
     }
 
     public function getId(): string
@@ -54,6 +56,16 @@ class Company
     public function getTaxStatus(): TaxStatus
     {
         return $this->taxStatus;
+    }
+
+    public function getScore(): ?int
+    {
+        return $this->score;
+    }
+
+    public function changeScore(int $score): void
+    {
+        $this->score = $score;
     }
 
     public function changeSocialReason(string $socialReason): void

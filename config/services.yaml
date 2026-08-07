@@ -1,5 +1,6 @@
 parameters:
     app.mailer.from_address: '%env(MAILER_FROM_ADDRESS)%'
+    app.credit_bureau_simulation.webhook_url: '%env(CREDIT_BUREAU_SIMULATION_WEBHOOK_URL)%'
 
 services:
     _defaults:
@@ -29,6 +30,13 @@ services:
     App\CreditRequest\Infrastructure\Service\CreditRequestProposalExpirationMailer:
         arguments:
             $fromAddress: '%app.mailer.from_address%'
+
+    App\CreditRequest\Domain\Service\CreditRequestApplicationWebhookClientInterface:
+        alias: App\CreditRequest\Infrastructure\Service\CreditRequestApplicationWebhookClient
+
+    App\CreditRequest\Infrastructure\Service\CreditRequestApplicationWebhookClient:
+        arguments:
+            $webhookUrl: '%app.credit_bureau_simulation.webhook_url%'
 
     App\Shared\Domain\Service\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager

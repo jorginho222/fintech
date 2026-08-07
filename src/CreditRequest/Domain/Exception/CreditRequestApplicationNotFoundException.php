@@ -6,10 +6,10 @@ namespace App\CreditRequest\Domain\Exception;
 
 use App\Shared\Domain\Exception\DomainHttpException;
 
-final class ExceededAmountException extends DomainHttpException
+final class CreditRequestApplicationNotFoundException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Requested amount exceeds the maximum allowed for this company.', 422);
+        parent::__construct('Credit request application not found.', 404);
     }
 }

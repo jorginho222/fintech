@@ -15,12 +15,15 @@ final class CreditRequestApplicationSerializer
             'amount' => $creditRequestApplication->getAmount(),
             'installmentQuantity' => $creditRequestApplication->getInstallmentQuantity(),
             'status' => $creditRequestApplication->getStatus()->value,
+            'rejectionReason' => $creditRequestApplication->getRejectionReason(),
+            'creditRequestId' => $creditRequestApplication->getCreditRequest()?->getId(),
             'company' => [
                 'id' => $creditRequestApplication->getCompany()->getId(),
                 'socialReason' => $creditRequestApplication->getCompany()->getSocialReason(),
                 'cuit' => $creditRequestApplication->getCompany()->getCuit(),
                 'email' => $creditRequestApplication->getCompany()->getEmail(),
                 'taxStatus' => $creditRequestApplication->getCompany()->getTaxStatus()->value,
+                'score' => $creditRequestApplication->getCompany()->getScore(),
             ],
         ];
     }

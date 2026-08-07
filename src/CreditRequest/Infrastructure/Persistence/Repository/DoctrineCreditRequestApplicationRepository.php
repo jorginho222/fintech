@@ -17,4 +17,9 @@ class DoctrineCreditRequestApplicationRepository implements CreditRequestApplica
         $this->em->persist($creditRequestApplication);
         $this->em->flush();
     }
+
+    public function findById(string $id): ?CreditRequestApplication
+    {
+        return $this->em->find(CreditRequestApplication::class, $id);
+    }
 }

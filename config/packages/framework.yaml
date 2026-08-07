@@ -12,6 +12,9 @@ framework:
         enabled: true
     validation:
         enabled: true
+    http_client:
+        default_options:
+            timeout: 5
 
 when@test:
     framework:

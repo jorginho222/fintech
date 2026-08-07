@@ -12,6 +12,7 @@
         <field name="cuit" column="cuit" type="string" length="11" nullable="false"/>
         <field name="email" column="email" type="string" nullable="false"/>
         <field name="taxStatus" column="tax_status" type="string" enum-type="App\Company\Domain\Model\TaxStatus" nullable="false"/>
+        <field name="score" column="score" type="integer" nullable="true"/>
 
         <one-to-many field="creditRequestCollection" target-entity="App\CreditRequest\Domain\Model\CreditRequest" mapped-by="company"/>
     </entity>

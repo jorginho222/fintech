@@ -6,17 +6,15 @@ namespace App\CreditRequest\Domain\Service;
 
 final class InstallmentCalculator
 {
-    // TODO: derive annual rate from credit product configuration instead of hardcoding
-    private const string ANNUAL_RATE = '0.60';
     private const string IVA_RATE    = '0.21';
     private const int    CALC_SCALE  = 10;
 
     /**
      * @return list<InstallmentCreateDto>
      */
-    public function calculate(string $requestedAmount, int $termMonths): array
+    public function calculate(string $requestedAmount, int $termMonths, string $annualRate): array
     {
-        $monthlyRate = bcdiv(self::ANNUAL_RATE, '12', self::CALC_SCALE);
+        $monthlyRate = bcdiv($annualRate, '12', self::CALC_SCALE);
 
         // CuotaPura = (requestedAmount × i) / (1 − (1 + i)^(−termMonths))
         $onePlusRate    = bcadd('1', $monthlyRate, self::CALC_SCALE);

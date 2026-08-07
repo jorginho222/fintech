@@ -15,19 +15,17 @@ use Symfony\Component\Uid\Uuid;
 
 final class CreditRequestCreator
 {
-    private const string NOMINAL_INTEREST_RATE = '60.00';
-
     public function __construct(
         private readonly CreditRequestRepositoryInterface $creditRequestRepository,
         private readonly InstallmentCalculator            $installmentCalculator,
     ) {}
 
-    public function execute(Company $company, int $amount, int $installmentQuantity): CreditRequest
+    public function execute(Company $company, int $amount, int $installmentQuantity, string $annualRate): CreditRequest
     {
         $creditRequest = new CreditRequest(
             Uuid::v4()->toRfc4122(),
             (string) $amount,
-            self::NOMINAL_INTEREST_RATE,
+            bcmul($annualRate, '100', 2),
             $installmentQuantity,
             $company,
             CreditRequestStatus::Proposal,
@@ -36,6 +34,7 @@ final class CreditRequestCreator
         $installmentDtos = $this->installmentCalculator->calculate(
             (string) $amount,
             $installmentQuantity,
+            $annualRate,
         );
 
         foreach ($installmentDtos as $installmentDto) {
