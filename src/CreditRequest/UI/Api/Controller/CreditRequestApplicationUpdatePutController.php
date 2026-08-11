@@ -23,7 +23,7 @@ final class CreditRequestApplicationUpdatePutController
         private readonly TransactionManagerInterface           $transactionManager,
     ) {}
 
-    #[Route('/api/credit-request-application-update', name: 'credit_request_application_update', methods: ['PUT'])]
+    #[Route('/credit-request-application-update', name: 'credit_request_application_update', methods: ['PUT'])]
     public function __invoke(Request $request): JsonResponse
     {
         $input = new CreditRequestApplicationResultDto($request, $this->validator);

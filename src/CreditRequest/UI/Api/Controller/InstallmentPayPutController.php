@@ -19,7 +19,7 @@ final class InstallmentPayPutController
         private readonly TransactionManagerInterface $transactionManager,
     ) {}
 
-    #[Route('/api/installment/{id}/pay', name: 'installment_pay', methods: ['PUT'])]
+    #[Route('/installment/{id}/pay', name: 'installment_pay', methods: ['PUT'])]
     public function __invoke(string $id): JsonResponse
     {
         $creditRequest = $this->transactionManager->transactional(

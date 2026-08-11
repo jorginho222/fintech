@@ -3,9 +3,11 @@ company_controllers:
         path: ../src/Company/UI/Api/Controller/
         namespace: App\Company\UI\Api\Controller
     type: attribute
+    prefix: '%app.api_prefix%'
 
 credit_request_controllers:
     resource:
         path: ../src/CreditRequest/UI/Api/Controller/
         namespace: App\CreditRequest\UI\Api\Controller
     type: attribute
+    prefix: '%app.api_prefix%'

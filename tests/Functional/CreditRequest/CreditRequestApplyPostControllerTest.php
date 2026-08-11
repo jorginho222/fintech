@@ -8,8 +8,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class CreditRequestApplyPostControllerTest extends WebTestCase
 {
-    private const string APPLY_URL    = '/api/credit-request/apply';
-    private const string COMPANY_URL  = '/api/company';
+    private const string APPLY_URL    = '/api/v1/credit-request/apply';
+    private const string COMPANY_URL  = '/api/v1/company';
 
     private const array COMPANY = [
         'id'           => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',

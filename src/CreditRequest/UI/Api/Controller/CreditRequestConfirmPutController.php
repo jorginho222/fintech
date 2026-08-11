@@ -17,7 +17,7 @@ final class CreditRequestConfirmPutController
         private readonly CreditRequestSerializer $creditRequestSerializer,
     ) {}
 
-    #[Route('/api/credit-request/{id}/confirm', name: 'credit_request_confirm', methods: ['PUT'])]
+    #[Route('/credit-request/{id}/confirm', name: 'credit_request_confirm', methods: ['PUT'])]
     public function __invoke(string $id): JsonResponse
     {
         $creditRequest = $this->creditRequestActivator->execute($id, new \DateTimeImmutable());

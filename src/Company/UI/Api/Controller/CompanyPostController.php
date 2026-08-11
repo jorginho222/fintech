@@ -21,7 +21,7 @@ final class CompanyPostController
     {
     }
 
-    #[Route('/api/company', name: 'company_post', methods: ['POST'])]
+    #[Route('/company', name: 'company_post', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         $input = new CompanyCreateDto($request, $this->validator);

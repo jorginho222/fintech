@@ -23,7 +23,7 @@ final class CreditRequestApplyPostController
     {
     }
 
-    #[Route('/api/credit-request/apply', name: 'credit_request_apply', methods: ['POST'])]
+    #[Route('/credit-request/apply', name: 'credit_request_apply', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         $input = new CreditRequestApplyDto($request, $this->validator);

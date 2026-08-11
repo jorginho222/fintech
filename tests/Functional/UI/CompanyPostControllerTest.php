@@ -8,7 +8,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class CompanyPostControllerTest extends WebTestCase
 {
-    private const string BASE_URL = '/api/company';
+    private const string BASE_URL = '/api/v1/company';
 
     private const array VALID_PAYLOAD = [
         'id'           => '550e8400-e29b-41d4-a716-446655440000',
