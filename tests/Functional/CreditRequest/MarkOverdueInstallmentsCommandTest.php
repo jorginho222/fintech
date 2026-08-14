@@ -28,6 +28,7 @@ final class MarkOverdueInstallmentsCommandTest extends KernelTestCase
             '20123456780',
             'empresa@example.com',
             TaxStatus::Monotributo,
+            'hashed-password',
         );
         $em->persist($company);
 

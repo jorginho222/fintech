@@ -23,6 +23,11 @@ class DoctrineCompanyRepository implements CompanyRepositoryInterface
         return $this->em->find(Company::class, $id);
     }
 
+    public function findByCuit(string $cuit): ?Company
+    {
+        return $this->em->getRepository(Company::class)->findOneBy(['cuit' => $cuit]);
+    }
+
     public function findAll(): array
     {
         return $this->em->getRepository(Company::class)->findAll();

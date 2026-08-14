@@ -6,7 +6,7 @@ namespace App\CreditRequest\Application\UseCase;
 
 use App\Company\Domain\Exception\CompanyNotFoundException;
 use App\Company\Domain\Repository\CompanyRepositoryInterface;
-use App\CreditRequest\Application\DTO\CreditRequestApplyDto;
+use App\CreditRequest\Application\DTO\CreditRequestApplicationCreateDto;
 use App\CreditRequest\Domain\Model\CreditRequestApplication;
 
 final class CreditRequestApplicationHandler
@@ -17,7 +17,7 @@ final class CreditRequestApplicationHandler
         private readonly CreditRequestApplicationSimulationService  $creditRequestApplicationSimulationService,
     ) {}
 
-    public function execute(CreditRequestApplyDto $dto): CreditRequestApplication
+    public function execute(CreditRequestApplicationCreateDto $dto): CreditRequestApplication
     {
         $company = $this->companyRepository->findById($dto->companyId);
         if ($company === null) {

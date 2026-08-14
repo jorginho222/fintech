@@ -28,6 +28,7 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
             '20111111112',
             'aprobada@empresa.com',
             TaxStatus::Monotributo,
+            'hashed-password',
         );
         $em->persist($company);
 
@@ -77,6 +78,7 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
             '20222222223',
             'rechazada@empresa.com',
             TaxStatus::Monotributo,
+            'hashed-password',
         );
         $em->persist($company);
 

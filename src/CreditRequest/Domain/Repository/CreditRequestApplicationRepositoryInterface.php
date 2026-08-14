@@ -11,4 +11,9 @@ interface CreditRequestApplicationRepositoryInterface
     public function save(CreditRequestApplication $creditRequestApplication): void;
 
     public function findById(string $id): ?CreditRequestApplication;
+
+    /**
+     * @return list<CreditRequestApplication>
+     */
+    public function search(string $companyId): array;
 }

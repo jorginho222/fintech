@@ -5,6 +5,10 @@
                   https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
 
     <entity name="App\Company\Domain\Model\Company" table="companies">
+        <unique-constraints>
+            <unique-constraint name="uniq_companies_cuit" columns="cuit"/>
+        </unique-constraints>
+
         <id name="id" type="string" column="id">
             <generator strategy="NONE"/>
         </id>
@@ -12,9 +16,11 @@
         <field name="cuit" column="cuit" type="string" length="11" nullable="false"/>
         <field name="email" column="email" type="string" nullable="false"/>
         <field name="taxStatus" column="tax_status" type="string" enum-type="App\Company\Domain\Model\TaxStatus" nullable="false"/>
+        <field name="hashedPassword" column="password" type="string" length="255" nullable="false"/>
         <field name="score" column="score" type="integer" nullable="true"/>
 
         <one-to-many field="creditRequestCollection" target-entity="App\CreditRequest\Domain\Model\CreditRequest" mapped-by="company"/>
+        <one-to-many field="creditRequestApplicationCollection" target-entity="App\CreditRequest\Domain\Model\CreditRequestApplication" mapped-by="company"/>
     </entity>
 
 </doctrine-mapping>

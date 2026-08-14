@@ -1,6 +1,7 @@
 parameters:
     app.mailer.from_address: '%env(MAILER_FROM_ADDRESS)%'
     app.credit_bureau_simulation.webhook_url: '%env(CREDIT_BUREAU_SIMULATION_WEBHOOK_URL)%'
+    app.credit_bureau_simulation.webhook_secret: '%env(CREDIT_BUREAU_WEBHOOK_SECRET)%'
     app.api_version: 'v1'
     app.api_prefix: '/api/%app.api_version%'
 
@@ -39,6 +40,20 @@ services:
     App\CreditRequest\Infrastructure\Service\CreditRequestApplicationWebhookClient:
         arguments:
             $webhookUrl: '%app.credit_bureau_simulation.webhook_url%'
+            $webhookSecret: '%app.credit_bureau_simulation.webhook_secret%'
+
+    App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator:
+        arguments:
+            $webhookSecret: '%app.credit_bureau_simulation.webhook_secret%'
+
+    App\Company\Domain\Service\PasswordHasherInterface:
+        alias: App\Company\Infrastructure\Security\SymfonyPasswordHasher
+
+    App\Company\Domain\Service\AuthTokenGeneratorInterface:
+        alias: App\Company\Infrastructure\Security\LexikAuthTokenGenerator
 
     App\Shared\Domain\Service\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager
+
+    App\Shared\Domain\Service\AuthenticatedCompanyIdProviderInterface:
+        alias: App\Company\Infrastructure\Security\JwtAuthenticatedCompanyIdProvider

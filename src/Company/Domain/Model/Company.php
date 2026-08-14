@@ -21,6 +21,7 @@ class Company
         private string $cuit,
         private string $email,
         private TaxStatus $taxStatus,
+        private string $hashedPassword,
     ) {
         if (!preg_match('/^\d{11}$/', $cuit)) {
             throw new \InvalidArgumentException('CUIT must be exactly 11 digits.');
@@ -56,6 +57,16 @@ class Company
     public function getTaxStatus(): TaxStatus
     {
         return $this->taxStatus;
+    }
+
+    public function getHashedPassword(): string
+    {
+        return $this->hashedPassword;
+    }
+
+    public function changeHashedPassword(string $hashedPassword): void
+    {
+        $this->hashedPassword = $hashedPassword;
     }
 
     public function getScore(): ?int

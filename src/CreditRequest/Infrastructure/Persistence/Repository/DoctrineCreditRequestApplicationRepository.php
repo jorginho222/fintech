@@ -22,4 +22,15 @@ class DoctrineCreditRequestApplicationRepository implements CreditRequestApplica
     {
         return $this->em->find(CreditRequestApplication::class, $id);
     }
+
+    public function search(string $companyId): array
+    {
+        return $this->em->createQueryBuilder()
+            ->select('creditRequestApplication')
+            ->from(CreditRequestApplication::class, 'creditRequestApplication')
+            ->where('IDENTITY(creditRequestApplication.company) = :companyId')
+            ->setParameter('companyId', $companyId)
+            ->getQuery()
+            ->getResult();
+    }
 }

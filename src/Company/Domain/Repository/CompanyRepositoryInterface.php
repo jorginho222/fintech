@@ -12,6 +12,8 @@ interface CompanyRepositoryInterface
 
     public function findById(string $id): ?Company;
 
+    public function findByCuit(string $cuit): ?Company;
+
     public function findAll(): array;
 
     public function delete(Company $company): void;

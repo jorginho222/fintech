@@ -4,36 +4,30 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\CreditRequest;
 
+use App\Tests\Functional\ApiAuthenticationTrait;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
-final class CreditRequestApplyPostControllerTest extends WebTestCase
+final class CreditRequestApplicationCreatePostControllerTest extends WebTestCase
 {
-    private const string APPLY_URL    = '/api/v1/credit-request/apply';
-    private const string COMPANY_URL  = '/api/v1/company';
+    use ApiAuthenticationTrait;
 
-    private const array COMPANY = [
-        'id'           => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
-        'socialReason' => 'Empresa SRL',
-        'cuit'         => '20123456780',
-        'email'        => 'empresa@empresa.com',
-        'taxStatus'    => 'monotributo',
-    ];
+    private const string APPLY_URL = '/api/v1/credit-request/apply';
 
     public function testApplyReturns201WithPendingApplication(): void
     {
         $client = static::createClient();
-        $client->jsonRequest('POST', self::COMPANY_URL, self::COMPANY);
+        [$company, $token] = $this->registerAndLogin($client);
 
         $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => self::COMPANY['id'],
+            'companyId'           => $company['id'],
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
-        ]);
+        ], self::bearer($token));
 
         self::assertResponseStatusCodeSame(201);
         $body = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('evaluation_pending', $body['status']);
-        self::assertSame(self::COMPANY['id'], $body['company']['id']);
+        self::assertSame($company['id'], $body['company']['id']);
         self::assertSame(10_000_000, (int) $body['amount']);
         self::assertSame(12, $body['installmentQuantity']);
     }

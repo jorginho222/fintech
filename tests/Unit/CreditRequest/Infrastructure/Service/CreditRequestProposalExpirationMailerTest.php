@@ -23,6 +23,7 @@ final class CreditRequestProposalExpirationMailerTest extends TestCase
             '20123456780',
             'empresa@example.com',
             TaxStatus::Monotributo,
+            'hashed-password',
         );
 
         $creditRequest = new CreditRequest(

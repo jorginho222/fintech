@@ -1,0 +1,47 @@
+security:
+    password_hashers:
+        App\Company\Infrastructure\Security\CompanyUser: 'auto'
+
+    providers:
+        companies:
+            id: App\Company\Infrastructure\Security\CompanyUserProvider
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # Pre-authentication endpoint: a stale or malformed token must not block a login attempt.
+        login:
+            pattern: ^%app.api_prefix%/login$
+            security: false
+
+        # The credit bureau authenticates with a shared secret, not with a company token.
+        credit_bureau_webhook:
+            pattern: ^%app.api_prefix%/credit-request-application-update$
+            stateless: true
+            custom_authenticators:
+                - App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator
+
+        api:
+            pattern: ^%app.api_prefix%
+            stateless: true
+            provider: companies
+            jwt: ~
+
+    # Note: Only the *first* matching rule is applied
+    access_control:
+        - { path: '^%app.api_prefix%/company_registration$', methods: [POST], roles: PUBLIC_ACCESS }
+        - { path: '^%app.api_prefix%/credit-request-application-update$', methods: [PUT], roles: ROLE_CREDIT_BUREAU_WEBHOOK }
+        - { path: '^%app.api_prefix%', roles: ROLE_COMPANY }
+
+when@test:
+    security:
+        password_hashers:
+            # Password hashers are resource-intensive by design to ensure security.
+            # In tests, it's safe to reduce their cost to improve performance.
+            App\Company\Infrastructure\Security\CompanyUser:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon
