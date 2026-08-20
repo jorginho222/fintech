@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\CreditRequest\Domain\Repository;
 
 use App\CreditRequest\Domain\Model\CreditRequest;
+use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
 
 interface CreditRequestRepositoryInterface
@@ -18,6 +19,11 @@ interface CreditRequestRepositoryInterface
     public function findById(string $id): ?CreditRequest;
 
     public function findInstallmentById(string $id): ?Installment;
+
+    /**
+     * @return CreditRequest[]
+     */
+    public function search(string $companyId, CreditRequestStatus $status): array;
 
     /**
      * @return CreditRequest[]

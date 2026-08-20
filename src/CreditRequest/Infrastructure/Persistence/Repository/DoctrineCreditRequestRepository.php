@@ -43,6 +43,19 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         return $this->em->find(Installment::class, $id);
     }
 
+    public function search(string $companyId, CreditRequestStatus $status): array
+    {
+        return $this->em->createQueryBuilder()
+            ->select('creditRequest')
+            ->from(CreditRequest::class, 'creditRequest')
+            ->where('IDENTITY(creditRequest.company) = :companyId')
+            ->andWhere('creditRequest.status = :status')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findExpiredProposals(\DateTimeImmutable $now): array
     {
         return $this->em->createQueryBuilder()

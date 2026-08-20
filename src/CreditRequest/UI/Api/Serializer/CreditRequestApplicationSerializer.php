@@ -10,13 +10,18 @@ final class CreditRequestApplicationSerializer
 {
     public function serialize(CreditRequestApplication $creditRequestApplication): array
     {
+        $creditRequest = $creditRequestApplication->getCreditRequest();
+
         return [
             'id' => $creditRequestApplication->getId(),
             'amount' => $creditRequestApplication->getAmount(),
             'installmentQuantity' => $creditRequestApplication->getInstallmentQuantity(),
             'status' => $creditRequestApplication->getStatus()->value,
             'rejectionReason' => $creditRequestApplication->getRejectionReason(),
-            'creditRequestId' => $creditRequestApplication->getCreditRequest()?->getId(),
+            'creditRequest' => $creditRequest === null ? null : [
+                'id' => $creditRequest->getId(),
+                'status' => $creditRequest->getStatus()->value,
+            ],
             'company' => [
                 'id' => $creditRequestApplication->getCompany()->getId(),
                 'socialReason' => $creditRequestApplication->getCompany()->getSocialReason(),

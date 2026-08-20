@@ -10,6 +10,7 @@ use App\CreditRequest\Application\DTO\CreditRequestApplicationResultDto;
 use App\CreditRequest\Application\UseCase\CreditRequestApplicationResultHandler;
 use App\CreditRequest\Domain\Model\CreditRequestApplication;
 use App\CreditRequest\Domain\Model\CreditRequestApplicationStatus;
+use App\CreditRequest\UI\Api\Serializer\CreditRequestApplicationSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -62,6 +63,12 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
         self::assertSame(CreditRequestApplicationStatus::Approved, $updatedApplication->getStatus());
         self::assertNull($updatedApplication->getRejectionReason());
         self::assertNotNull($updatedApplication->getCreditRequest());
+
+        $serializedApplication = (new CreditRequestApplicationSerializer())->serialize($updatedApplication);
+        self::assertSame([
+            'id' => $updatedApplication->getCreditRequest()->getId(),
+            'status' => 'proposal',
+        ], $serializedApplication['creditRequest']);
 
         $updatedCompany = $em->find(Company::class, $company->getId());
         self::assertSame(812, $updatedCompany->getScore());

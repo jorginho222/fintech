@@ -26,6 +26,7 @@ final class CreditRequestApplicationCreatePostControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(201);
         $body = json_decode($client->getResponse()->getContent(), true);
         self::assertSame('evaluation_pending', $body['status']);
+        self::assertNull($body['creditRequest']);
         self::assertSame($company['id'], $body['company']['id']);
         self::assertSame(10_000_000, (int) $body['amount']);
         self::assertSame(12, $body['installmentQuantity']);
