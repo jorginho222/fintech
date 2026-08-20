@@ -19,7 +19,6 @@ final class CreditRequestApplicationCreatePostControllerTest extends WebTestCase
         [$company, $token] = $this->registerAndLogin($client);
 
         $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => $company['id'],
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ], self::bearer($token));

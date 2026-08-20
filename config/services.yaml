@@ -40,7 +40,6 @@ services:
     App\CreditRequest\Infrastructure\Service\CreditRequestApplicationWebhookClient:
         arguments:
             $webhookUrl: '%app.credit_bureau_simulation.webhook_url%'
-            $webhookSecret: '%app.credit_bureau_simulation.webhook_secret%'
 
     App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator:
         arguments:

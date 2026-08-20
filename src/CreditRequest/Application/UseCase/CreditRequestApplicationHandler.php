@@ -8,18 +8,22 @@ use App\Company\Domain\Exception\CompanyNotFoundException;
 use App\Company\Domain\Repository\CompanyRepositoryInterface;
 use App\CreditRequest\Application\DTO\CreditRequestApplicationCreateDto;
 use App\CreditRequest\Domain\Model\CreditRequestApplication;
+use App\Shared\Domain\Service\AuthenticatedCompanyIdProviderInterface;
 
 final class CreditRequestApplicationHandler
 {
     public function __construct(
         private readonly CompanyRepositoryInterface                $companyRepository,
+        private readonly AuthenticatedCompanyIdProviderInterface   $authenticatedCompanyIdProvider,
         private readonly CreditRequestApplicationCreator            $creditRequestApplicationCreator,
         private readonly CreditRequestApplicationSimulationService  $creditRequestApplicationSimulationService,
     ) {}
 
     public function execute(CreditRequestApplicationCreateDto $dto): CreditRequestApplication
     {
-        $company = $this->companyRepository->findById($dto->companyId);
+        $company = $this->companyRepository->findById(
+            $this->authenticatedCompanyIdProvider->getCompanyId(),
+        );
         if ($company === null) {
             throw new CompanyNotFoundException();
         }

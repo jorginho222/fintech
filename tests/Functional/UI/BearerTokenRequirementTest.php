@@ -23,7 +23,6 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client = static::createClient();
 
         $client->jsonRequest('POST', self::APPLY_URL, [
-            'companyId'           => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ]);
@@ -38,7 +37,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['companyId' => 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', 'amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer('garbage.token.value'),
         );
 
@@ -48,12 +47,12 @@ final class BearerTokenRequirementTest extends WebTestCase
     public function testProtectedEndpointWithAValidTokenIsReachable(): void
     {
         $client = static::createClient();
-        [$company, $token] = $this->registerAndLogin($client);
+        [, $token] = $this->registerAndLogin($client);
 
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['companyId' => $company['id'], 'amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer($token),
         );
 
