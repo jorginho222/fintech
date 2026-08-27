@@ -14,7 +14,8 @@ class CreditRequest
     private const int APPROVAL_LIMIT_DAYS = 3;
 
     private Collection $installmentCollection;
-    private \DateTimeImmutable $createdAt;
+    private \DateTimeImmutable $proposalDate;
+    private ?\DateTimeImmutable $activationDate = null;
     private \DateTimeImmutable $approvalLimitDate;
 
     public function __construct(
@@ -27,8 +28,8 @@ class CreditRequest
     )
     {
         $this->installmentCollection = new ArrayCollection();
-        $this->createdAt = new \DateTimeImmutable();
-        $this->approvalLimitDate = $this->createdAt->modify(sprintf('+%d days', self::APPROVAL_LIMIT_DAYS));
+        $this->proposalDate = new \DateTimeImmutable();
+        $this->approvalLimitDate = $this->proposalDate->modify(sprintf('+%d days', self::APPROVAL_LIMIT_DAYS));
     }
 
     public function getId(): string
@@ -61,9 +62,14 @@ class CreditRequest
         return $this->status;
     }
 
-    public function getCreatedAt(): \DateTimeImmutable
+    public function getProposalDate(): \DateTimeImmutable
     {
-        return $this->createdAt;
+        return $this->proposalDate;
+    }
+
+    public function getActivationDate(): ?\DateTimeImmutable
+    {
+        return $this->activationDate;
     }
 
     public function getApprovalLimitDate(): \DateTimeImmutable
@@ -95,13 +101,14 @@ class CreditRequest
         $this->status = CreditRequestStatus::ProposalExpired;
     }
 
-    public function activate(): void
+    public function activate(\DateTimeImmutable $now): void
     {
         if ($this->status !== CreditRequestStatus::Proposal) {
             throw new CreditRequestNotActivableException();
         }
 
         $this->status = CreditRequestStatus::Active;
+        $this->activationDate = $now;
     }
 
     public function addInstallment(Installment $installment): void

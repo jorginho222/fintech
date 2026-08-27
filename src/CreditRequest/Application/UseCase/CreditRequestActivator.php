@@ -24,7 +24,7 @@ final class CreditRequestActivator
             throw new CreditRequestNotFoundException();
         }
 
-        $creditRequest->activate();
+        $creditRequest->activate($now);
 
         $installments = $creditRequest->getInstallmentCollection()->toArray();
         usort($installments, static fn (Installment $a, Installment $b): int => $a->getPeriodNumber() <=> $b->getPeriodNumber());
