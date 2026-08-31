@@ -39,4 +39,13 @@ interface CreditRequestRepositoryInterface
      * @return Installment[]
      */
     public function findWithOverdueInstallments(\DateTimeImmutable $now): array;
+
+    /**
+     * @return Installment[]
+     */
+    public function findPendingInstallmentsToPay(
+        string $companyId,
+        \DateTimeImmutable $periodStart,
+        \DateTimeImmutable $periodEnd,
+    ): array;
 }

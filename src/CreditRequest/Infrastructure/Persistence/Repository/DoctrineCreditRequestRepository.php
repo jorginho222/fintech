@@ -94,4 +94,27 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
             ->getQuery()
             ->getResult();
     }
+
+    public function findPendingInstallmentsToPay(
+        string $companyId,
+        \DateTimeImmutable $periodStart,
+        \DateTimeImmutable $periodEnd,
+    ): array {
+        return $this->em->createQueryBuilder()
+            ->select('installment')
+            ->from(Installment::class, 'installment')
+            ->join('installment.creditRequest', 'creditRequest')
+            ->where('IDENTITY(creditRequest.company) = :companyId')
+            ->andWhere('creditRequest.status = :creditRequestStatus')
+            ->andWhere('installment.status IN (:installmentStatuses)')
+            ->andWhere('installment.dueDate >= :periodStart')
+            ->andWhere('installment.dueDate < :periodEnd')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('creditRequestStatus', CreditRequestStatus::Active)
+            ->setParameter('installmentStatuses', [InstallmentStatus::Pending, InstallmentStatus::Overdue])
+            ->setParameter('periodStart', $periodStart)
+            ->setParameter('periodEnd', $periodEnd)
+            ->getQuery()
+            ->getResult();
+    }
 }
