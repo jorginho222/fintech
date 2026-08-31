@@ -26,6 +26,10 @@ final class CreditRequestSerializer
             'totalAmount' => $creditRequest->getTotalAmount(),
             'nominalInterestRate' => $creditRequest->getNominalInterestRate(),
             'installmentQuantity' => $creditRequest->getInstallmentQuantity(),
+            'paidInstallments' => count(array_filter(
+                $installments,
+                static fn (Installment $installment): bool => $installment->getStatus() === InstallmentStatus::Paid,
+            )),
             'proposalDate' => $creditRequest->getProposalDate()->format(\DateTimeInterface::ATOM),
             'activationDate' => $creditRequest->getActivationDate()?->format(\DateTimeInterface::ATOM),
             'company' => [
