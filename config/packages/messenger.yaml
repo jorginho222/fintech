@@ -1,2 +1,15 @@
 framework:
-    messenger: ~
+    messenger:
+        failure_transport: failed
+        transports:
+            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            failed: 'doctrine://default?queue_name=failed'
+        routing:
+            App\CreditRequest\Application\Message\SimulateCreditRequestApplicationMessage: async
+            App\CreditRequest\Application\Message\HandleCreditRequestApplicationResultMessage: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                async: 'in-memory://'

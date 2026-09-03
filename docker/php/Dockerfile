@@ -4,15 +4,16 @@ RUN apk add --no-cache \
     libpq-dev \
     libzip-dev \
     icu-dev \
+    rabbitmq-c \
     && docker-php-ext-install \
         pdo_pgsql \
         zip \
         intl \
         opcache \
         bcmath \
-    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers \
-    && pecl install xdebug \
-    && docker-php-ext-enable xdebug \
+    && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS linux-headers rabbitmq-c-dev \
+    && pecl install xdebug amqp \
+    && docker-php-ext-enable xdebug amqp \
     && apk del .build-deps
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

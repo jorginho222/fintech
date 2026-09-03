@@ -11,18 +11,28 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - postgres
+      - rabbitmq
 
   worker:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    command: bin/console messenger:consume scheduler_credit_request -vv
+    command: bin/console messenger:consume scheduler_credit_request async -vv
     volumes:
       - .:/var/www/html
     environment:
       - APP_ENV=dev
     depends_on:
       - postgres
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   nginx:
     image: nginx:alpine
@@ -54,3 +64,4 @@ services:
 
 volumes:
   postgres_data:
+  rabbitmq_data:
