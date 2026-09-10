@@ -14,7 +14,7 @@ I inspected the actual frontend code (not just its spec) to understand the exist
 
 Per explicit direction, the backend route is `/company-total-debt` instead of the frontend's current `/installment/total-debt` (query params `month`/`year` stay as the frontend already sends them). This means the frontend's `total-debt-api.ts` needs a matching update to the new path — included as a step below so the two stay in sync.
 
-Investigation also found that `CreditRequestRepositoryInterface::findPendingInstallmentsToPay(companyId, periodStart, periodEnd)` (implemented in `DoctrineCreditRequestRepository`) already does almost exactly what's needed: scopes by company, filters to `Active` credit requests, includes only `Pending`/`Overdue` installments (excludes `Paid`), and takes a half-open `[periodStart, periodEnd)` date range. No repository or persistence changes are needed — this feature is a new Application/UI-layer use case that calls this existing method with a different range (today → first day of the month after the limit month, instead of a single calendar month).
+Investigation initially found that `CreditRequestRepositoryInterface::findPendingInstallmentsToPay(companyId, periodStart, periodEnd)` looked reusable as-is. **Correction made during implementation:** that method applies one shared date lower bound to both `Pending` and `Overdue` installments, which would wrongly exclude overdue installments whose due date is before `periodStart` (today) — exactly the installments the spec requires to always be counted. This was first fixed by adding a separate `findOutstandingInstallments` method, then unified back into `findPendingInstallmentsToPay` itself via a 4th parameter, `bool $includeOverdueBeforePeriodStart = false`: when `true`, `Overdue` installments are included unconditionally (bounded only by `periodEnd`) and `Pending` installments still require `dueDate >= periodStart`; when `false` (the default), behavior is identical to before, so the existing pending-to-pay-for-a-month endpoint (`InstallmentPendingToPaySearcher`) needs no change.
 
 ## Approach
 
@@ -35,7 +35,7 @@ Constructor-injects `CreditRequestRepositoryInterface` and `AuthenticatedCompany
 - `$periodStart = new \DateTimeImmutable('today')` — literally today, not the first of any month. This is what makes "limit month = current month" correctly include only today-onward: the range never starts at the beginning of a month, always at today.
 - `$periodEnd = (new \DateTimeImmutable(sprintf('%04d-%02d-01', $dto->year, $dto->month)))->modify('first day of next month')` — same `first day of next month` trick as the sibling use case, anchored on the limit month, giving an exclusive upper bound equivalent to "through the end of the limit month, inclusive."
 - No defensive check needed for `periodEnd <= periodStart` — the DTO's callback already guarantees the limit month/year is on or after the current one, so `periodEnd` is always strictly after `periodStart`.
-- `$installments = $this->creditRequestRepository->findPendingInstallmentsToPay($this->authenticatedCompanyIdProvider->getCompanyId(), $periodStart, $periodEnd);` unchanged.
+- `$installments = $this->creditRequestRepository->findPendingInstallmentsToPay($this->authenticatedCompanyIdProvider->getCompanyId(), $periodStart, $periodEnd, includeOverdueBeforePeriodStart: true);` (unified method, see correction above).
 - Sums via `array_reduce($installments, static fn (string $total, Installment $installment): string => bcadd($total, $installment->getTotalAmount(), 2), '0.00')` (moved here from the sibling controller's pattern) and returns that string directly — already rounded to 2 decimals via `bcadd`'s scale argument, already a string.
 
 ### 3. New Controller — `src/CreditRequest/UI/Api/Controller/TotalDebtGetController.php`
@@ -50,7 +50,6 @@ Single-action `__invoke`, matching the sibling controller's structure:
 Update the request path from `/installment/total-debt` to `/company-total-debt` so the frontend calls the new backend route. No change needed to the query params (`month`/`year` already match) or to `TotalDebt`'s type (`totalAmount: string | number` already accepts the string the backend returns).
 
 ### No changes needed to:
-- `CreditRequestRepositoryInterface` / `DoctrineCreditRequestRepository` — reused as-is.
 - `config/routes.yaml` — the `credit_request_controllers` resource already attribute-registers everything under `src/CreditRequest/UI/Api/Controller/`.
 - `config/services.yaml` — autowiring already covers the new DTO/UseCase/Controller (only `Domain/Model/` and `Kernel.php` are excluded); no new repository interface is being added, so no new alias entry is needed.
 

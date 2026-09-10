@@ -41,11 +41,16 @@ interface CreditRequestRepositoryInterface
     public function findWithOverdueInstallments(\DateTimeImmutable $now): array;
 
     /**
+     * When $includeOverdueBeforePeriodStart is true, overdue installments are always included
+     * regardless of how far in the past their due date is; pending installments still require
+     * a due date on or after $periodStart. Both are bounded above by $periodEnd (exclusive).
+     *
      * @return Installment[]
      */
     public function findPendingInstallmentsToPay(
         string $companyId,
         \DateTimeImmutable $periodStart,
         \DateTimeImmutable $periodEnd,
+        bool $includeOverdueBeforePeriodStart = false,
     ): array;
 }

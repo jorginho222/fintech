@@ -99,22 +99,32 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         string $companyId,
         \DateTimeImmutable $periodStart,
         \DateTimeImmutable $periodEnd,
+        bool $includeOverdueBeforePeriodStart = false,
     ): array {
-        return $this->em->createQueryBuilder()
+        $queryBuilder = $this->em->createQueryBuilder()
             ->select('installment')
             ->from(Installment::class, 'installment')
             ->join('installment.creditRequest', 'creditRequest')
             ->where('IDENTITY(creditRequest.company) = :companyId')
             ->andWhere('creditRequest.status = :creditRequestStatus')
-            ->andWhere('installment.status IN (:installmentStatuses)')
-            ->andWhere('installment.dueDate >= :periodStart')
             ->andWhere('installment.dueDate < :periodEnd')
             ->setParameter('companyId', $companyId)
             ->setParameter('creditRequestStatus', CreditRequestStatus::Active)
-            ->setParameter('installmentStatuses', [InstallmentStatus::Pending, InstallmentStatus::Overdue])
             ->setParameter('periodStart', $periodStart)
-            ->setParameter('periodEnd', $periodEnd)
-            ->getQuery()
-            ->getResult();
+            ->setParameter('periodEnd', $periodEnd);
+
+        if ($includeOverdueBeforePeriodStart) {
+            $queryBuilder
+                ->andWhere('installment.status = :overdueStatus OR (installment.status = :pendingStatus AND installment.dueDate >= :periodStart)')
+                ->setParameter('overdueStatus', InstallmentStatus::Overdue)
+                ->setParameter('pendingStatus', InstallmentStatus::Pending);
+        } else {
+            $queryBuilder
+                ->andWhere('installment.status IN (:installmentStatuses)')
+                ->andWhere('installment.dueDate >= :periodStart')
+                ->setParameter('installmentStatuses', [InstallmentStatus::Pending, InstallmentStatus::Overdue]);
+        }
+
+        return $queryBuilder->getQuery()->getResult();
     }
 }
