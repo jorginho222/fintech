@@ -51,6 +51,16 @@ services:
     App\Company\Domain\Service\AuthTokenGeneratorInterface:
         alias: App\Company\Infrastructure\Security\LexikAuthTokenGenerator
 
+    App\Company\Domain\Service\CurrentAuthTokenProviderInterface:
+        alias: App\Company\Infrastructure\Security\JwtCurrentAuthTokenProvider
+
+    App\Company\Domain\Repository\RevokedTokenRepositoryInterface:
+        alias: App\Company\Infrastructure\Persistence\Repository\DoctrineRevokedTokenRepository
+
+    App\Company\Infrastructure\Security\RevokedTokenJwtListener:
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_decoded, method: onJwtDecoded }
+
     App\Shared\Domain\Service\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager
 
