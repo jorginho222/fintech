@@ -1,9 +1,11 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
 parameters:
     app.mailer.from_address: '%env(MAILER_FROM_ADDRESS)%'
     app.credit_bureau_simulation.webhook_url: '%env(CREDIT_BUREAU_SIMULATION_WEBHOOK_URL)%'
     app.credit_bureau_simulation.webhook_secret: '%env(CREDIT_BUREAU_WEBHOOK_SECRET)%'
     app.api_version: 'v1'
     app.api_prefix: '/api/%app.api_version%'
+    app.jwt_refresh_token_ttl: '%env(int:JWT_REFRESH_TOKEN_TTL)%'
 
 services:
     _defaults:
@@ -51,8 +53,15 @@ services:
     App\Company\Domain\Service\AuthTokenGeneratorInterface:
         alias: App\Company\Infrastructure\Security\LexikAuthTokenGenerator
 
+    App\Company\Infrastructure\Security\LexikAuthTokenGenerator:
+        arguments:
+            $refreshTokenTtl: '%app.jwt_refresh_token_ttl%'
+
     App\Company\Domain\Service\CurrentAuthTokenProviderInterface:
         alias: App\Company\Infrastructure\Security\JwtCurrentAuthTokenProvider
+
+    App\Company\Domain\Service\RefreshTokenReaderInterface:
+        alias: App\Company\Infrastructure\Security\LexikRefreshTokenReader
 
     App\Company\Domain\Repository\RevokedTokenRepositoryInterface:
         alias: App\Company\Infrastructure\Persistence\Repository\DoctrineRevokedTokenRepository
@@ -60,6 +69,10 @@ services:
     App\Company\Infrastructure\Security\RevokedTokenJwtListener:
         tags:
             - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_decoded, method: onJwtDecoded }
+
+    App\Company\Infrastructure\Security\RefreshTokenAuthenticationGuard:
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_authenticated, method: onJwtAuthenticated }
 
     App\Shared\Domain\Service\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager

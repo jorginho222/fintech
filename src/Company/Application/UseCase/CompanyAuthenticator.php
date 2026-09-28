@@ -27,6 +27,10 @@ final class CompanyAuthenticator
             throw new InvalidCredentialsException();
         }
 
-        return new CompanyLoginResultDto($company, $this->authTokenGenerator->generateFor($company));
+        return new CompanyLoginResultDto(
+            $company,
+            $this->authTokenGenerator->generateAccessTokenFor($company),
+            $this->authTokenGenerator->generateRefreshTokenFor($company),
+        );
     }
 }

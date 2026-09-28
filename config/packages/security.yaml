@@ -11,9 +11,11 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
-        # Pre-authentication endpoint: a stale or malformed token must not block a login attempt.
-        login:
-            pattern: ^%app.api_prefix%/login$
+        # Credential-exchange endpoints: a stale or malformed access token must not block
+        # logging in or refreshing. The refresh token itself is the credential here, carried
+        # in the request body rather than as a bearer token.
+        token_exchange:
+            pattern: ^%app.api_prefix%/(login|refresh)$
             security: false
 
         # The credit bureau authenticates with a shared secret, not with a company token.

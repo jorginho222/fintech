@@ -18,8 +18,25 @@ class DoctrineRevokedTokenRepository implements RevokedTokenRepositoryInterface
         $this->em->flush();
     }
 
+    public function delete(RevokedToken $revokedToken): void
+    {
+        $this->em->remove($revokedToken);
+        $this->em->flush();
+    }
+
     public function existsByJti(string $jti): bool
     {
         return $this->em->find(RevokedToken::class, $jti) !== null;
+    }
+
+    public function findExpiredBefore(\DateTimeImmutable $before): array
+    {
+        return $this->em->createQueryBuilder()
+            ->select('revokedToken')
+            ->from(RevokedToken::class, 'revokedToken')
+            ->where('revokedToken.expiresAt < :before')
+            ->setParameter('before', $before)
+            ->getQuery()
+            ->getResult();
     }
 }

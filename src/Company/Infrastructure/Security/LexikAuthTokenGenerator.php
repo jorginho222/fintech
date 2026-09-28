@@ -12,17 +12,39 @@ use Symfony\Component\Uid\Uuid;
 
 final class LexikAuthTokenGenerator implements AuthTokenGeneratorInterface
 {
-    public function __construct(private readonly JWTTokenManagerInterface $jwtTokenManager) {}
+    public function __construct(
+        private readonly JWTTokenManagerInterface $jwtTokenManager,
+        private readonly int                      $refreshTokenTtl,
+    ) {}
 
-    public function generateFor(Company $company): AuthToken
+    public function generateAccessTokenFor(Company $company): AuthToken
+    {
+        // No 'exp' override: falls back to the globally configured (short) token_ttl.
+        return $this->generate($company, 'access', null);
+    }
+
+    public function generateRefreshTokenFor(Company $company): AuthToken
+    {
+        return $this->generate($company, 'refresh', $this->refreshTokenTtl);
+    }
+
+    private function generate(Company $company, string $type, ?int $ttl): AuthToken
     {
         $user = CompanyUser::fromCompany($company);
 
-        $value = $this->jwtTokenManager->createFromPayload($user, [
+        $payload = [
             'companyId' => $company->getId(),
-            // Unique per token so a single session can be revoked via /logout without affecting others.
+            'type' => $type,
+            // Unique per token so a single session can be revoked via /logout, or rotated
+            // via /refresh, without affecting the company's other active tokens.
             'jti' => Uuid::v4()->toRfc4122(),
-        ]);
+        ];
+
+        if ($ttl !== null) {
+            $payload['exp'] = time() + $ttl;
+        }
+
+        $value = $this->jwtTokenManager->createFromPayload($user, $payload);
 
         return new AuthToken($value, $this->expirationOf($value));
     }

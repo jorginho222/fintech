@@ -11,7 +11,8 @@ final readonly class CompanyLoginResultDto
 {
     public function __construct(
         public Company   $company,
-        public AuthToken $token,
+        public AuthToken $accessToken,
+        public AuthToken $refreshToken,
     ) {
     }
 }
