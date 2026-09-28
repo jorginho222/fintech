@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Company\UI\Api\Controller;
 
-use App\Company\Application\DTO\CompanyLoginDto;
-use App\Company\Application\UseCase\CompanyAuthenticator;
+use App\Company\Application\DTO\RefreshTokenDto;
+use App\Company\Application\UseCase\CompanyTokenRefresher;
 use App\Company\UI\Api\Serializer\CompanyAuthResultSerializer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -13,21 +13,19 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-final class CompanyLoginPostController
+final class CompanyTokenRefreshPostController
 {
     public function __construct(
-        private readonly CompanyAuthenticator       $companyAuthenticator,
+        private readonly CompanyTokenRefresher      $companyTokenRefresher,
         private readonly CompanyAuthResultSerializer $companyAuthResultSerializer,
         private readonly ValidatorInterface         $validator,
-    )
-    {
-    }
+    ) {}
 
-    #[Route('/login', name: 'company_login', methods: ['POST'])]
+    #[Route('/refresh', name: 'company_token_refresh', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
-        $input  = new CompanyLoginDto($request, $this->validator);
-        $result = $this->companyAuthenticator->execute($input);
+        $input  = new RefreshTokenDto($request, $this->validator);
+        $result = $this->companyTokenRefresher->execute($input);
 
         return new JsonResponse($this->companyAuthResultSerializer->serialize($result), Response::HTTP_OK);
     }

@@ -8,5 +8,7 @@ use App\Company\Domain\Model\Company;
 
 interface AuthTokenGeneratorInterface
 {
-    public function generateFor(Company $company): AuthToken;
+    public function generateAccessTokenFor(Company $company): AuthToken;
+
+    public function generateRefreshTokenFor(Company $company): AuthToken;
 }

@@ -21,10 +21,11 @@ final class CompanyAuthenticatorTest extends TestCase
 {
     private const string CUIT = '20123456789';
 
-    public function testItReturnsATokenForTheCompanyWhenCredentialsMatch(): void
+    public function testItReturnsAnAccessAndRefreshTokenForTheCompanyWhenCredentialsMatch(): void
     {
-        $company = $this->company();
-        $token   = new AuthToken('a.jwt.token', new \DateTimeImmutable('+1 hour'));
+        $company      = $this->company();
+        $accessToken  = new AuthToken('an.access.token', new \DateTimeImmutable('+1 hour'));
+        $refreshToken = new AuthToken('a.refresh.token', new \DateTimeImmutable('+1 week'));
 
         $repository = $this->createMock(CompanyRepositoryInterface::class);
         $repository->method('findByCuit')->with(self::CUIT)->willReturn($company);
@@ -36,13 +37,15 @@ final class CompanyAuthenticatorTest extends TestCase
             ->willReturn(true);
 
         $tokenGenerator = $this->createMock(AuthTokenGeneratorInterface::class);
-        $tokenGenerator->expects(self::once())->method('generateFor')->with($company)->willReturn($token);
+        $tokenGenerator->expects(self::once())->method('generateAccessTokenFor')->with($company)->willReturn($accessToken);
+        $tokenGenerator->expects(self::once())->method('generateRefreshTokenFor')->with($company)->willReturn($refreshToken);
 
         $result = (new CompanyAuthenticator($repository, $hasher, $tokenGenerator))
             ->execute($this->loginDto(self::CUIT, 'secret123'));
 
         self::assertSame($company, $result->company);
-        self::assertSame($token, $result->token);
+        self::assertSame($accessToken, $result->accessToken);
+        self::assertSame($refreshToken, $result->refreshToken);
     }
 
     public function testItRejectsAWrongPasswordWithoutIssuingAToken(): void
@@ -54,7 +57,8 @@ final class CompanyAuthenticatorTest extends TestCase
         $hasher->method('verify')->willReturn(false);
 
         $tokenGenerator = $this->createMock(AuthTokenGeneratorInterface::class);
-        $tokenGenerator->expects(self::never())->method('generateFor');
+        $tokenGenerator->expects(self::never())->method('generateAccessTokenFor');
+        $tokenGenerator->expects(self::never())->method('generateRefreshTokenFor');
 
         $this->expectException(InvalidCredentialsException::class);
 
@@ -71,7 +75,8 @@ final class CompanyAuthenticatorTest extends TestCase
         $hasher->expects(self::never())->method('verify');
 
         $tokenGenerator = $this->createMock(AuthTokenGeneratorInterface::class);
-        $tokenGenerator->expects(self::never())->method('generateFor');
+        $tokenGenerator->expects(self::never())->method('generateAccessTokenFor');
+        $tokenGenerator->expects(self::never())->method('generateRefreshTokenFor');
 
         $this->expectException(InvalidCredentialsException::class);
 

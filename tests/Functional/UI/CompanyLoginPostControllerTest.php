@@ -11,7 +11,7 @@ final class CompanyLoginPostControllerTest extends WebTestCase
 {
     use ApiAuthenticationTrait;
 
-    public function testLoginWithValidCredentialsReturnsATokenAndTheCompany(): void
+    public function testLoginWithValidCredentialsReturnsAnAccessTokenARefreshTokenAndTheCompany(): void
     {
         $client  = static::createClient();
         $company = $this->registerCompany($client);
@@ -24,11 +24,21 @@ final class CompanyLoginPostControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $body = json_decode($client->getResponse()->getContent(), true);
-        self::assertNotEmpty($body['token']);
-        // A JWT is three dot-separated segments.
-        self::assertCount(3, explode('.', $body['token']));
-        self::assertNotEmpty($body['expiresAt']);
-        self::assertGreaterThan(new \DateTimeImmutable(), new \DateTimeImmutable($body['expiresAt']));
+
+        foreach (['accessToken', 'refreshToken'] as $key) {
+            self::assertNotEmpty($body[$key]['token']);
+            // A JWT is three dot-separated segments.
+            self::assertCount(3, explode('.', $body[$key]['token']));
+            self::assertNotEmpty($body[$key]['expiresAt']);
+            self::assertGreaterThan(new \DateTimeImmutable(), new \DateTimeImmutable($body[$key]['expiresAt']));
+        }
+
+        self::assertNotSame($body['accessToken']['token'], $body['refreshToken']['token']);
+        self::assertGreaterThan(
+            new \DateTimeImmutable($body['accessToken']['expiresAt']),
+            new \DateTimeImmutable($body['refreshToken']['expiresAt']),
+        );
+
         self::assertSame($company['id'], $body['company']['id']);
         self::assertSame($company['cuit'], $body['company']['cuit']);
         self::assertSame($company['socialReason'], $body['company']['socialReason']);
