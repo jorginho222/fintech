@@ -10,5 +10,12 @@ interface RevokedTokenRepositoryInterface
 {
     public function save(RevokedToken $revokedToken): void;
 
+    public function delete(RevokedToken $revokedToken): void;
+
     public function existsByJti(string $jti): bool;
+
+    /**
+     * @return RevokedToken[]
+     */
+    public function findExpiredBefore(\DateTimeImmutable $before): array;
 }
