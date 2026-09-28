@@ -8,6 +8,7 @@ use App\Company\Domain\Model\Company;
 use App\Company\Domain\Service\AuthToken;
 use App\Company\Domain\Service\AuthTokenGeneratorInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use Symfony\Component\Uid\Uuid;
 
 final class LexikAuthTokenGenerator implements AuthTokenGeneratorInterface
 {
@@ -17,7 +18,11 @@ final class LexikAuthTokenGenerator implements AuthTokenGeneratorInterface
     {
         $user = CompanyUser::fromCompany($company);
 
-        $value = $this->jwtTokenManager->createFromPayload($user, ['companyId' => $company->getId()]);
+        $value = $this->jwtTokenManager->createFromPayload($user, [
+            'companyId' => $company->getId(),
+            // Unique per token so a single session can be revoked via /logout without affecting others.
+            'jti' => Uuid::v4()->toRfc4122(),
+        ]);
 
         return new AuthToken($value, $this->expirationOf($value));
     }
