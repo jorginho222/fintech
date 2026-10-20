@@ -18,13 +18,16 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     command: bin/console messenger:consume scheduler_credit_request scheduler_company async -vv
+    restart: unless-stopped
     volumes:
       - .:/var/www/html
     environment:
       - APP_ENV=dev
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -33,6 +36,12 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
 
   nginx:
     image: nginx:alpine
