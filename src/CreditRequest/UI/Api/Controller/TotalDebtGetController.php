@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\UI\Api\Controller;
 
+use App\Company\Domain\Model\Permission;
 use App\CreditRequest\Application\DTO\TotalDebtSearchDto;
 use App\CreditRequest\Application\UseCase\TotalDebtCalculator;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class TotalDebtGetController
@@ -19,6 +21,7 @@ final class TotalDebtGetController
         private readonly ValidatorInterface  $validator,
     ) {}
 
+    #[IsGranted(Permission::TotalDebtView->value)]
     #[Route('/company-total-debt', name: 'company_total_debt', methods: ['GET'])]
     public function __invoke(Request $request): JsonResponse
     {

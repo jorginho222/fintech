@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Company\Infrastructure\Security;
 
-use App\Company\Domain\Model\Company;
+use App\Company\Domain\Model\User;
 use App\Company\Domain\Service\AuthToken;
 use App\Company\Domain\Service\AuthTokenGeneratorInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -17,26 +17,26 @@ final class LexikAuthTokenGenerator implements AuthTokenGeneratorInterface
         private readonly int                      $refreshTokenTtl,
     ) {}
 
-    public function generateAccessTokenFor(Company $company): AuthToken
+    public function generateAccessTokenFor(User $user): AuthToken
     {
         // No 'exp' override: falls back to the globally configured (short) token_ttl.
-        return $this->generate($company, 'access', null);
+        return $this->generate($user, 'access', null);
     }
 
-    public function generateRefreshTokenFor(Company $company): AuthToken
+    public function generateRefreshTokenFor(User $user): AuthToken
     {
-        return $this->generate($company, 'refresh', $this->refreshTokenTtl);
+        return $this->generate($user, 'refresh', $this->refreshTokenTtl);
     }
 
-    private function generate(Company $company, string $type, ?int $ttl): AuthToken
+    private function generate(User $user, string $type, ?int $ttl): AuthToken
     {
-        $user = CompanyUser::fromCompany($company);
-
         $payload = [
-            'companyId' => $company->getId(),
+            // Members act on behalf of their company, so data scoping keeps reading this claim.
+            'companyId' => $user->getCompany()->getId(),
+            'userId' => $user->getId(),
             'type' => $type,
             // Unique per token so a single session can be revoked via /logout, or rotated
-            // via /refresh, without affecting the company's other active tokens.
+            // via /refresh, without affecting the user's other active tokens.
             'jti' => Uuid::v4()->toRfc4122(),
         ];
 
@@ -44,7 +44,7 @@ final class LexikAuthTokenGenerator implements AuthTokenGeneratorInterface
             $payload['exp'] = time() + $ttl;
         }
 
-        $value = $this->jwtTokenManager->createFromPayload($user, $payload);
+        $value = $this->jwtTokenManager->createFromPayload(CompanyUser::fromUser($user), $payload);
 
         return new AuthToken($value, $this->expirationOf($value));
     }

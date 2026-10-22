@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\UI;
 
-use App\Company\Domain\Model\Company;
+use App\Company\Domain\Repository\UserRepositoryInterface;
 use App\Company\Domain\Service\PasswordHasherInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 final class CompanyRegistrationPostControllerTest extends WebTestCase
@@ -57,9 +56,10 @@ final class CompanyRegistrationPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(201);
 
+        // The company's credentials live on its admin user.
         $storedPassword = self::getContainer()
-            ->get(EntityManagerInterface::class)
-            ->find(Company::class, self::VALID_PAYLOAD['id'])
+            ->get(UserRepositoryInterface::class)
+            ->findByTaxIdentifier(self::VALID_PAYLOAD['cuit'])
             ->getHashedPassword();
 
         self::assertNotSame(self::VALID_PAYLOAD['password'], $storedPassword);
@@ -97,6 +97,18 @@ final class CompanyRegistrationPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertArrayHasKey('password', json_decode($client->getResponse()->getContent(), true)['errors']);
+    }
+
+    public function testCreateWithPasswordMissingANumberReturns422(): void
+    {
+        $client = static::createClient();
+        $client->jsonRequest('POST', self::BASE_URL, [...self::VALID_PAYLOAD, 'password' => 'Secret!!x']);
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertContains(
+            'Password must contain at least one number.',
+            json_decode($client->getResponse()->getContent(), true)['errors']['password'],
+        );
     }
 
     public function testCreateWithPasswordMissingASpecialCharacterReturns422(): void

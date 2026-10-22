@@ -23,6 +23,9 @@ services:
     App\Company\Domain\Repository\CompanyRepositoryInterface:
         alias: App\Company\Infrastructure\Persistence\Repository\DoctrineCompanyRepository
 
+    App\Company\Domain\Repository\UserRepositoryInterface:
+        alias: App\Company\Infrastructure\Persistence\Repository\DoctrineUserRepository
+
     App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface:
         alias: App\CreditRequest\Infrastructure\Persistence\Repository\DoctrineCreditRequestRepository
 
@@ -73,6 +76,14 @@ services:
     App\Company\Infrastructure\Security\RefreshTokenAuthenticationGuard:
         tags:
             - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_authenticated, method: onJwtAuthenticated }
+
+    # Below the firewall (priority 8), so the authenticated user is already known.
+    App\Company\Infrastructure\Security\PasswordChangeRequiredListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.request, method: onKernelRequest, priority: 0 }
+
+    App\Company\Domain\Service\AuthenticatedUserIdProviderInterface:
+        alias: App\Company\Infrastructure\Security\SecurityAuthenticatedUserIdProvider
 
     App\Shared\Domain\Service\TransactionManagerInterface:
         alias: App\Shared\Infrastructure\Service\DoctrineTransactionManager

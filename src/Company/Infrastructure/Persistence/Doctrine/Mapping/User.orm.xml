@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <entity name="App\Company\Domain\Model\User" table="users" inheritance-type="SINGLE_TABLE">
+        <discriminator-column name="type" type="string" length="20"/>
+        <discriminator-map>
+            <discriminator-mapping value="admin" class="App\Company\Domain\Model\AdminUser"/>
+            <discriminator-mapping value="member" class="App\Company\Domain\Model\MemberUser"/>
+        </discriminator-map>
+
+        <indexes>
+            <index name="idx_users_company_id" columns="company_id"/>
+        </indexes>
+
+        <unique-constraints>
+            <unique-constraint name="uniq_users_tax_identifier" columns="tax_identifier"/>
+            <!-- One admin per company. -->
+            <unique-constraint name="uniq_users_company_admin" columns="company_id">
+                <options>
+                    <option name="where">((type)::text = 'admin'::text)</option>
+                </options>
+            </unique-constraint>
+        </unique-constraints>
+
+        <id name="id" type="string" column="id">
+            <generator strategy="NONE"/>
+        </id>
+        <field name="taxIdentifier" column="tax_identifier" type="string" length="11" nullable="false"/>
+        <field name="hashedPassword" column="password" type="string" length="255" nullable="false"/>
+        <field name="active" column="active" type="boolean" nullable="false"/>
+
+        <many-to-one field="company" target-entity="App\Company\Domain\Model\Company">
+            <join-column name="company_id" referenced-column-name="id" nullable="false"/>
+        </many-to-one>
+    </entity>
+
+</doctrine-mapping>

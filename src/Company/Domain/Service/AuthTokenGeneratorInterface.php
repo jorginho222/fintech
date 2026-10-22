@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Company\Domain\Service;
 
-use App\Company\Domain\Model\Company;
+use App\Company\Domain\Model\User;
 
 interface AuthTokenGeneratorInterface
 {
-    public function generateAccessTokenFor(Company $company): AuthToken;
+    public function generateAccessTokenFor(User $user): AuthToken;
 
-    public function generateRefreshTokenFor(Company $company): AuthToken;
+    public function generateRefreshTokenFor(User $user): AuthToken;
 }

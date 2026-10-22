@@ -74,6 +74,7 @@ Cross-module references use explicit `use` imports (e.g. `CreditRequest` referen
 - **Repository binding:** explicit alias in `config/services.yaml` under `# Repository interface → implementation bindings`.
 - **ID strategy:** `strategy="NONE"` — caller generates UUIDs via `symfony/uid`.
 - **Routing:** `config/routes.yaml` has one entry per module pointing to its `UI/Api/Controller/`.
+- **Error messages in Spanish:** `DomainHttpException` messages reach the client as `{"error": "..."}` and the frontend displays them as is, so new exceptions use a user-facing message in neutral Spanish (formal "usted", no voseo; e.g. `Debe cambiar su contraseña para continuar.`). Some older exceptions are still in English, pending translation.
 
 ## Testing Layout
 

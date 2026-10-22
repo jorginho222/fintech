@@ -4,28 +4,31 @@ declare(strict_types=1);
 
 namespace App\Company\Infrastructure\Security;
 
-use App\Company\Domain\Repository\CompanyRepositoryInterface;
+use App\Company\Domain\Repository\UserRepositoryInterface;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 /**
+ * Called by the JWT authenticator on every request, so permission changes and deactivation
+ * apply to already-issued tokens from the next request on.
+ *
  * @implements UserProviderInterface<CompanyUser>
  */
 final class CompanyUserProvider implements UserProviderInterface
 {
-    public function __construct(private readonly CompanyRepositoryInterface $companyRepository) {}
+    public function __construct(private readonly UserRepositoryInterface $userRepository) {}
 
     public function loadUserByIdentifier(string $identifier): UserInterface
     {
-        $company = $this->companyRepository->findByCuit($identifier);
+        $user = $this->userRepository->findByTaxIdentifier($identifier);
 
-        if ($company === null) {
-            throw new UserNotFoundException(sprintf('Company with CUIT "%s" not found.', $identifier));
+        if ($user === null || !$user->isActive()) {
+            throw new UserNotFoundException(sprintf('Active user with tax identifier "%s" not found.', $identifier));
         }
 
-        return CompanyUser::fromCompany($company);
+        return CompanyUser::fromUser($user);
     }
 
     public function refreshUser(UserInterface $user): UserInterface

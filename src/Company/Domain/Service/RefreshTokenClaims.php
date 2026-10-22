@@ -7,7 +7,7 @@ namespace App\Company\Domain\Service;
 final readonly class RefreshTokenClaims
 {
     public function __construct(
-        public string $companyId,
+        public string $userId,
         public string $jti,
         public \DateTimeImmutable $expiresAt,
     ) {

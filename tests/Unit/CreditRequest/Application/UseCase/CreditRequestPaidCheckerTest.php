@@ -66,7 +66,6 @@ final class CreditRequestPaidCheckerTest extends TestCase
             '20123456780',
             'empresa@example.com',
             TaxStatus::Monotributo,
-            'hashed-password',
         );
 
         return new CreditRequest(

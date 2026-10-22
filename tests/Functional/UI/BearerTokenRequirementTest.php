@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\UI;
 
-use App\Company\Domain\Model\Company;
+use App\Company\Domain\Repository\UserRepositoryInterface;
 use App\Company\Infrastructure\Security\CompanyUser;
 use App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator;
 use App\Tests\Functional\ApiAuthenticationTrait;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -168,13 +167,13 @@ final class BearerTokenRequirementTest extends WebTestCase
     {
         $companyPayload = $this->registerCompany($client);
 
-        $em      = self::getContainer()->get(EntityManagerInterface::class);
-        $company = $em->find(Company::class, $companyPayload['id']);
+        $admin = self::getContainer()->get(UserRepositoryInterface::class)->findByTaxIdentifier($companyPayload['cuit']);
 
         $jwtTokenManager = self::getContainer()->get(JWTTokenManagerInterface::class);
 
-        return $jwtTokenManager->createFromPayload(CompanyUser::fromCompany($company), [
-            'companyId' => $company->getId(),
+        return $jwtTokenManager->createFromPayload(CompanyUser::fromUser($admin), [
+            'companyId' => $admin->getCompany()->getId(),
+            'userId'    => $admin->getId(),
             'type'      => $type,
             'jti'       => 'test-jti-' . $type . '-' . $exp,
             'exp'       => $exp,
