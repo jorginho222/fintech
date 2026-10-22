@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Company\Application\DTO;
 
+use App\Company\Application\Validation\StrongPassword;
 use App\Company\Domain\Model\TaxStatus;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -31,10 +32,7 @@ final class CompanyRegistrationDto
     #[Assert\Choice(callback: [TaxStatus::class, 'values'])]
     public readonly string $taxStatus;
 
-    #[Assert\NotBlank]
-    #[Assert\Length(min: 8, max: 4096)]
-    #[Assert\Regex(pattern: '/[A-Z]/', message: 'Password must contain at least one capital letter.')]
-    #[Assert\Regex(pattern: '/[^A-Za-z\d]/', message: 'Password must contain at least one special character.')]
+    #[StrongPassword]
     public readonly string $password;
 
     public function __construct(Request $request, ValidatorInterface $validator)

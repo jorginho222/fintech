@@ -287,13 +287,20 @@ Paths are relative to `/api/v1`.
   - `GET /user/permission-catalogue`: the catalogue, grouped by resource.
 
 **New behaviours to handle**
-- **Password change required:** while `mustChangePassword` is true, every endpoint except `/me`, `/me/password` and `/logout` returns 403 with the password-change error. Show a forced password-change screen, then continue.
-- **Permission denied:** a member calling an endpoint they don't have permission for gets 403. Hide dashboard sections based on `user.permissions`. The admin has all of them.
+- **Password change required:** while `mustChangePassword` is true, every endpoint except `/me`, `/me/password` and `/logout` returns 403 with `{"error": "Debe cambiar su contraseña para continuar."}`. Show a forced password-change screen, then continue. Detect this case from `user.mustChangePassword` (login/refresh/`/me`), not by matching the message text.
+- **Permission denied:** a member calling an endpoint they don't have permission for (or any `/user...` route) gets 403 with `{"error": "No tiene permiso para acceder a este recurso."}`. Hide dashboard sections based on `user.permissions`. The admin has all of them.
 - **Deactivated user:** the next request gets 401, and login and refresh fail. Treat this like a session expiry.
 - **User-management errors:**
-  - 409 when the tax identifier is already taken.
-  - 409 when the limit of 10 active users is reached.
+  - 409 `{"error": "Ya existe un usuario con ese CUIT/CUIL."}` when the tax identifier is already taken.
+  - 409 `{"error": "La empresa ya alcanzó el máximo de usuarios activos."}` when the limit of 10 active users is reached.
+  - 404 `{"error": "Usuario no encontrado."}` for an unknown member or one from another company.
   - 422 for password-policy violations (one message per unmet rule).
+- **Password-change errors (`PUT /me/password`):**
+  - 422 `{"error": "La contraseña actual es incorrecta."}` for a wrong `currentPassword`. It is deliberately **not** 401, so the client's "401 → refresh/logout" handling doesn't fire.
+  - 422 `{"error": "La nueva contraseña debe ser distinta de la actual."}` when the new password equals the current one.
+  - 422 `errors.newPassword` for policy violations.
+  - 409 `{"error": "Este usuario no tiene permitido cambiar la contraseña."}` when the user isn't allowed to change it: the password was already changed, or the caller is the admin.
+- **Catalogue shape (`GET /user/permission-catalogue`):** `[{ "resource": "credit_request_application", "permissions": ["credit_request_application.list", ...] }, ...]`. The resource keys are `credit_request_application`, `credit_requests`, `payment_calendar` and `total_debt`.
 
 #### Frontend work items
 - Login: send `taxIdentifier` instead of `cuit` (`company-login-schema.ts`, `CompanyCredentials` in `company/types/company.ts`), and label the field "CUIT/CUIL".
@@ -358,6 +365,16 @@ Paths are relative to `/api/v1`.
 - `CompanyRegistrationPostControllerTest`: add a case where a password with no number (e.g. `Secret!!x`) gets 422 on `password`. Existing weak-password cases still fail as before.
 - `CompanyUserLoginPostControllerTest`: a member logs in with their CUIL through `taxIdentifier`. A request that still sends the old `cuit` key gets 422 on `taxIdentifier`.
 - **Existing suite:** `CompanyUserLoginPostControllerTest`, `CompanyUserTokenRefreshPostControllerTest` and all CreditRequest functional tests must still pass unchanged (the admin has full access). Add an assertion for the new `user` block in the login test.
+
+## Implementation notes (differences from the plan above)
+
+- **One serializer for both user types:** `CompanyUserSerializer` instead of `MemberUserSerializer`. The same `user` shape is returned by login/refresh, `/me` and member management, and it also serializes the admin, so a `MemberUser…` name would be misleading.
+- **Wrong current password on `PUT /me/password`:** `InvalidCurrentPasswordException` (422) instead of `InvalidCredentialsException` (401). The frontend treats 401 as an expired session and would log the user out.
+- **User id for `/me`:** `SecurityAuthenticatedUserIdProvider` reads the user loaded by the security layer, not a `userId` JWT claim. This also works for access tokens issued before the release.
+- **403 responses:** `ApiExceptionSubscriber` now maps `AccessDeniedHttpException` (from `#[IsGranted]` and `access_control`) to `{"error": "No tiene permiso para acceder a este recurso."}`, matching the API's other errors. Before, it was Symfony's problem-details body, which in dev includes the exception class.
+- **One-admin-per-company index:** the predicate is written as Postgres normalizes it (`((type)::text = 'admin'::text)`). Otherwise `doctrine:schema:validate` keeps reporting a diff.
+- **Migration:** `migrations/Version20261022020205.php`.
+- **Spanish error messages:** the exceptions added by this feature (and the 403 "access denied" body) carry their `error` message in Spanish, so the frontend can show it as is. Pre-existing exceptions (`Invalid credentials.`, `Company not found.`, etc.) and validation messages (including `StrongPassword`) are still in English and will be translated in a later change.
 
 ## Verification
 

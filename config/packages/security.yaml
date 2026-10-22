@@ -35,6 +35,8 @@ security:
     access_control:
         - { path: '^%app.api_prefix%/company_registration$', methods: [POST], roles: PUBLIC_ACCESS }
         - { path: '^%app.api_prefix%/credit-request-application-update$', methods: [PUT], roles: ROLE_CREDIT_BUREAU_WEBHOOK }
+        # Member management is the admin's alone, whatever permissions a member holds.
+        - { path: '^%app.api_prefix%/user(/|$)', roles: ROLE_COMPANY_ADMIN }
         - { path: '^%app.api_prefix%', roles: ROLE_COMPANY }
 
 when@test:

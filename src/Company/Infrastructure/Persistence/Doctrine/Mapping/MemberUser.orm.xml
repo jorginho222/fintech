@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doctrine-mapping xmlns="http://doctrine-project.org/schemas/orm/doctrine-mapping"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://doctrine-project.org/schemas/orm/doctrine-mapping
+                  https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
+
+    <!-- Single-table inheritance: member-only columns are nullable because admin rows leave them empty. -->
+    <entity name="App\Company\Domain\Model\MemberUser">
+        <field name="displayName" column="display_name" type="string" length="255" nullable="true"/>
+        <field name="permissions" column="permissions" type="json" nullable="true"/>
+        <field name="mustChangePassword" column="must_change_password" type="boolean" nullable="true"/>
+    </entity>
+
+</doctrine-mapping>

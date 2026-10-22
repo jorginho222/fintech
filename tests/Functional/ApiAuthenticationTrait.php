@@ -8,8 +8,9 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 trait ApiAuthenticationTrait
 {
-    private const string REGISTER_URL = '/api/v1/company_registration';
-    private const string LOGIN_URL    = '/api/v1/login';
+    private const string REGISTER_URL        = '/api/v1/company_registration';
+    private const string LOGIN_URL           = '/api/v1/login';
+    private const string MEMBER_NEW_PASSWORD = 'Changed456?';
 
     /**
      * @param array<string, mixed> $overrides
@@ -32,17 +33,17 @@ trait ApiAuthenticationTrait
         return $payload;
     }
 
-    private function login(KernelBrowser $client, string $cuit, string $password): string
+    private function login(KernelBrowser $client, string $taxIdentifier, string $password): string
     {
-        return $this->loginTokens($client, $cuit, $password)[0];
+        return $this->loginTokens($client, $taxIdentifier, $password)[0];
     }
 
     /**
      * @return array{0: string, 1: string} the access token and refresh token
      */
-    private function loginTokens(KernelBrowser $client, string $cuit, string $password): array
+    private function loginTokens(KernelBrowser $client, string $taxIdentifier, string $password): array
     {
-        $client->jsonRequest('POST', self::LOGIN_URL, ['cuit' => $cuit, 'password' => $password]);
+        $client->jsonRequest('POST', self::LOGIN_URL, ['taxIdentifier' => $taxIdentifier, 'password' => $password]);
         $body = json_decode($client->getResponse()->getContent(), true);
 
         return [$body['accessToken']['token'], $body['refreshToken']['token']];
@@ -75,6 +76,50 @@ trait ApiAuthenticationTrait
         [$accessToken, $refreshToken] = $this->loginTokens($client, $company['cuit'], $company['password']);
 
         return [$company, $accessToken, $refreshToken];
+    }
+
+    /**
+     * Creates a member through the admin API. The member still has to change its password.
+     *
+     * @param array<string, mixed> $overrides
+     *
+     * @return array<string, mixed> the payload the member was created with
+     */
+    private function createMember(KernelBrowser $client, string $adminToken, array $overrides = []): array
+    {
+        $payload = array_merge([
+            'id'            => 'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'taxIdentifier' => '27333444555',
+            'displayName'   => 'Ana Pérez',
+            'password'      => 'Initial123!',
+            'permissions'   => [],
+        ], $overrides);
+
+        $client->jsonRequest('POST', '/api/v1/user', $payload, self::bearer($adminToken));
+
+        return $payload;
+    }
+
+    /**
+     * Creates a member, completes its first-login password change and returns a bearer token
+     * with normal (permission-based) access.
+     *
+     * @param string[]             $permissions
+     * @param array<string, mixed> $overrides
+     */
+    private function createMemberAndLogin(KernelBrowser $client, string $adminToken, array $permissions, array $overrides = []): string
+    {
+        $member = $this->createMember($client, $adminToken, [...$overrides, 'permissions' => $permissions]);
+
+        $initialToken = $this->login($client, $member['taxIdentifier'], $member['password']);
+        $client->jsonRequest(
+            'PUT',
+            '/api/v1/me/password',
+            ['currentPassword' => $member['password'], 'newPassword' => self::MEMBER_NEW_PASSWORD],
+            self::bearer($initialToken),
+        );
+
+        return $this->login($client, $member['taxIdentifier'], self::MEMBER_NEW_PASSWORD);
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\UI\Api\Controller;
 
+use App\Company\Domain\Model\Permission;
 use App\CreditRequest\Application\DTO\CreditRequestApplicationCreateDto;
 use App\CreditRequest\Application\UseCase\CreditRequestApplicationHandler;
 use App\CreditRequest\UI\Api\Serializer\CreditRequestApplicationSerializer;
@@ -11,6 +12,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class CreditRequestApplicationCreatePostController
@@ -23,6 +25,7 @@ final class CreditRequestApplicationCreatePostController
     {
     }
 
+    #[IsGranted(Permission::CreditRequestApplicationCreate->value)]
     #[Route('/credit-request/apply', name: 'credit_request_apply', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {

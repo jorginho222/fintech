@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\UI\Api\Controller;
 
+use App\Company\Domain\Model\Permission;
 use App\CreditRequest\Application\UseCase\InstallmentToPaidUpdater;
 use App\CreditRequest\UI\Api\Serializer\CreditRequestSerializer;
 use App\Shared\Domain\Service\TransactionManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class InstallmentPayPutController
 {
@@ -19,6 +21,7 @@ final class InstallmentPayPutController
         private readonly TransactionManagerInterface $transactionManager,
     ) {}
 
+    #[IsGranted(Permission::InstallmentPay->value)]
     #[Route('/installment/{id}/pay', name: 'installment_pay', methods: ['PUT'])]
     public function __invoke(string $id): JsonResponse
     {

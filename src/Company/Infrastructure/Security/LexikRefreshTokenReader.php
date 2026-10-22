@@ -24,15 +24,15 @@ final class LexikRefreshTokenReader implements RefreshTokenReaderInterface
             throw new InvalidRefreshTokenException();
         }
 
-        $companyId = $payload['companyId'] ?? null;
+        $userId    = $payload['userId'] ?? null;
         $jti       = $payload['jti'] ?? null;
         $exp       = $payload['exp'] ?? null;
         $type      = $payload['type'] ?? null;
 
-        if ($type !== 'refresh' || !is_string($companyId) || $companyId === '' || !is_string($jti) || $jti === '' || !is_int($exp)) {
+        if ($type !== 'refresh' || !is_string($userId) || $userId === '' || !is_string($jti) || $jti === '' || !is_int($exp)) {
             throw new InvalidRefreshTokenException();
         }
 
-        return new RefreshTokenClaims($companyId, $jti, (new \DateTimeImmutable())->setTimestamp($exp));
+        return new RefreshTokenClaims($userId, $jti, (new \DateTimeImmutable())->setTimestamp($exp));
     }
 }

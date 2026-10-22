@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\UI\Api\Controller;
 
+use App\Company\Domain\Model\Permission;
 use App\CreditRequest\Application\DTO\InstallmentPendingToPaySearchDto;
 use App\CreditRequest\Application\UseCase\InstallmentPendingToPaySearcher;
 use App\CreditRequest\Domain\Model\Installment;
@@ -12,6 +13,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class InstallmentPendingToPaySearchGetController
@@ -22,6 +24,7 @@ final class InstallmentPendingToPaySearchGetController
         private readonly ValidatorInterface               $validator,
     ) {}
 
+    #[IsGranted(Permission::PaymentCalendarView->value)]
     #[Route('/installment/pending-to-pay/search', name: 'installment_pending_to_pay_search', methods: ['GET'])]
     public function __invoke(Request $request): JsonResponse
     {

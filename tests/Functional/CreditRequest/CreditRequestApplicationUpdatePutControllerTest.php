@@ -29,7 +29,6 @@ final class CreditRequestApplicationUpdatePutControllerTest extends WebTestCase
             '20111111112',
             'empresa@empresa.com',
             TaxStatus::Monotributo,
-            'hashed-password',
         );
         $em->persist($company);
 

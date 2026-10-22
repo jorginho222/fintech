@@ -9,6 +9,7 @@ use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 
@@ -32,6 +33,11 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
             $e instanceof DomainHttpException => new JsonResponse(
                 ['error' => $e->getMessage()],
                 $e->httpStatusCode()
+            ),
+            // Raised by the security layer (missing permission or admin role); the detail is not exposed.
+            $e instanceof AccessDeniedHttpException => new JsonResponse(
+                ['error' => 'No tiene permiso para acceder a este recurso.'],
+                Response::HTTP_FORBIDDEN
             ),
             default => null,
         };

@@ -28,7 +28,6 @@ final class DeleteExpiredCreditRequestProposalsCommandTest extends KernelTestCas
             '20123456780',
             'empresa@example.com',
             TaxStatus::Monotributo,
-            'hashed-password',
         );
         $em->persist($company);
 
@@ -86,7 +85,6 @@ final class DeleteExpiredCreditRequestProposalsCommandTest extends KernelTestCas
             '20123456780',
             'empresa@example.com',
             TaxStatus::Monotributo,
-            'hashed-password',
         );
         $em->persist($company);
 

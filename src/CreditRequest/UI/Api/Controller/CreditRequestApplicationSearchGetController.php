@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\CreditRequest\UI\Api\Controller;
 
+use App\Company\Domain\Model\Permission;
 use App\CreditRequest\Application\UseCase\CreditRequestApplicationSearcher;
 use App\CreditRequest\Domain\Model\CreditRequestApplication;
 use App\CreditRequest\UI\Api\Serializer\CreditRequestApplicationSerializer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class CreditRequestApplicationSearchGetController
 {
@@ -18,6 +20,7 @@ final class CreditRequestApplicationSearchGetController
         private readonly CreditRequestApplicationSerializer $creditRequestApplicationSerializer,
     ) {}
 
+    #[IsGranted(Permission::CreditRequestApplicationList->value)]
     #[Route('/credit-request-application/search', name: 'credit_request_application_search', methods: ['GET'])]
     public function __invoke(): JsonResponse
     {
