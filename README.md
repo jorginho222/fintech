@@ -7,6 +7,7 @@ Built with **Symfony 7.3** and **PHP 8.3**, following **Domain-Driven Design** a
 ## Features
 
 - **Company accounts:** registration, JWT login, token refresh, and logout with a token denylist
+- **Users and permissions:** each company has one admin user (logs in with the company's CUIT) who manages up to 10 active member users (log in with their CUIL). Members are deactivated or reactivated, never deleted, and only reach the resources their permissions allow
 - **Credit applications:** a company applies for credit; the application is sent asynchronously through RabbitMQ to the credit bureau
 - **Credit bureau webhook:** the bureau posts its decision back, authenticated with a shared secret
 - **Credit requests and installments:** confirm a proposal, list and pay pending installments, and get a company's total debt
@@ -30,7 +31,7 @@ The code is organized by module first, then by layer:
 
 ```
 src/
-  Company/          # Company accounts and authentication
+  Company/          # Company accounts, users, permissions and authentication
   CreditRequest/    # Applications, credit requests and installments
   Shared/           # Code shared across modules
     {Module}/
@@ -114,25 +115,65 @@ make migrate
 
 The API is now available at `http://localhost:8080/api/v1`.
 
+## Users and permissions
+
+Registering a company creates its **admin user**. The admin logs in with the company's CUIT, has every permission, and is the only user who can manage members.
+
+**Member users:**
+- The admin creates them with a CUIL (11 digits), a display name, a first password and a list of permissions.
+- A company can have at most **10 active members**. Members are never deleted: the admin deactivates them and can reactivate them later. A deactivated member loses access on their next request.
+- A member must change the password the admin set on their first login. Until then, every endpoint except `/me`, `/me/password` and `/logout` returns 403.
+- The admin can't change a member's password.
+- Permission and status changes apply on the member's next request, without logging in again.
+
+**Password policy** (members and new company registrations): at least 8 characters, with one uppercase letter, one number and one symbol.
+
+**Permission catalogue:**
+
+| Resource | Permission | Allows |
+|---|---|---|
+| Credit request applications | `credit_request_application.list` | List credit applications |
+| | `credit_request_application.create` | Apply for credit |
+| | `credit_request.confirm` | Confirm a credit proposal |
+| Credit requests | `credit_request.view` | Get a credit request |
+| | `credit_request.list` | List credit requests |
+| | `installment.pay` | Pay an installment |
+| Payment calendar | `payment_calendar.view` | List pending installments |
+| Total debt | `total_debt.view` | Get the company's total debt |
+
+The catalogue is defined in the `Permission` enum (`src/Company/Domain/Model/Permission.php`). Adding a permission needs no migration. Renaming or removing one needs a hand-written data migration that updates the members' stored permissions.
+
 ## API overview
 
-All routes are under `/api/v1`. Except for registration, login and refresh, every request needs an `Authorization: Bearer <token>` header.
+All routes are under `/api/v1`. Except for registration, login and refresh, every request needs an `Authorization: Bearer <token>` header. The Permission column shows what a member needs; the admin can call everything.
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/company_registration` | Register a company |
-| `POST` | `/login` | Get an access and refresh token |
-| `POST` | `/refresh` | Exchange a refresh token for a new access token |
-| `POST` | `/logout` | Revoke the current token |
-| `POST` | `/credit-request/apply` | Apply for credit |
-| `GET` | `/credit-request-application/search` | List credit applications |
-| `PUT` | `/credit-request-application-update` | Credit bureau webhook (shared-secret auth) |
-| `GET` | `/credit-request/search` | List credit requests |
-| `GET` | `/credit-request/{id}` | Get a credit request |
-| `PUT` | `/credit-request/{id}/confirm` | Confirm a credit proposal |
-| `GET` | `/installment/pending-to-pay/search` | List pending installments |
-| `PUT` | `/installment/{id}/pay` | Pay an installment |
-| `GET` | `/company-total-debt` | Get the company's total outstanding debt |
+| Method | Path | Description | Permission |
+|---|---|---|---|
+| `POST` | `/company_registration` | Register a company and its admin user | public |
+| `POST` | `/login` | Log in with `taxIdentifier` (CUIT or CUIL) and password; returns tokens, the company and the user | public |
+| `POST` | `/refresh` | Exchange a refresh token for a new access token | public |
+| `POST` | `/logout` | Revoke the current token | any user |
+| `GET` | `/me` | Get the current user | any user |
+| `PUT` | `/me/password` | Change the first-login password (members only) | any user |
+| `GET` | `/user/search` | List the company's members | admin |
+| `GET` | `/user/permission-catalogue` | Get the permission catalogue, grouped by resource | admin |
+| `POST` | `/user` | Create a member | admin |
+| `GET` | `/user/{id}` | Get a member | admin |
+| `PUT` | `/user/{id}` | Rename a member | admin |
+| `PUT` | `/user/{id}/permissions` | Replace a member's permissions | admin |
+| `PUT` | `/user/{id}/deactivate` | Deactivate a member | admin |
+| `PUT` | `/user/{id}/activate` | Reactivate a member | admin |
+| `POST` | `/credit-request/apply` | Apply for credit | `credit_request_application.create` |
+| `GET` | `/credit-request-application/search` | List credit applications | `credit_request_application.list` |
+| `PUT` | `/credit-request-application-update` | Credit bureau webhook (shared-secret auth) | — |
+| `GET` | `/credit-request/search` | List credit requests | `credit_request.list` |
+| `GET` | `/credit-request/{id}` | Get a credit request | `credit_request.view` |
+| `PUT` | `/credit-request/{id}/confirm` | Confirm a credit proposal | `credit_request.confirm` |
+| `GET` | `/installment/pending-to-pay/search` | List pending installments | `payment_calendar.view` |
+| `PUT` | `/installment/{id}/pay` | Pay an installment | `installment.pay` |
+| `GET` | `/company-total-debt` | Get the company's total outstanding debt | `total_debt.view` |
+
+Errors come back as `{"error": "..."}`, or `{"errors": {field: [messages]}}` for validation failures. A missing permission gives 403.
 
 ## Testing
 
