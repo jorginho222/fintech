@@ -10,6 +10,6 @@ final class InstallmentAlreadyPaidException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Installment is already paid.', 409);
+        parent::__construct('La cuota ya fue pagada.', 409);
     }
 }

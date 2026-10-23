@@ -16,10 +16,10 @@ final class CreditRequestApplicationResultDto
     public readonly string $applicationId;
 
     #[Assert\NotBlank]
-    #[Assert\Regex(pattern: '/^\d{11}$/', message: 'CUIT must be exactly 11 digits.')]
+    #[Assert\Regex(pattern: '/^\d{11}$/', message: 'El CUIT debe tener exactamente 11 dígitos.')]
     public readonly string $cuit;
 
-    #[Assert\NotNull(message: 'evaluatedAt must be a valid date string.')]
+    #[Assert\NotNull(message: 'El campo evaluatedAt debe ser una fecha válida.')]
     public readonly ?\DateTimeImmutable $evaluatedAt;
 
     #[Assert\Valid]

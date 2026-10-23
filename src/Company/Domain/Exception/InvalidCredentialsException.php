@@ -10,6 +10,6 @@ final class InvalidCredentialsException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Invalid credentials.', 401);
+        parent::__construct('Credenciales inválidas.', 401);
     }
 }

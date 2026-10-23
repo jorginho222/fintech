@@ -57,7 +57,7 @@ final class CompanyUserTokenRefreshPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertSame(
-            'Invalid refresh token.',
+            'El token de actualización no es válido.',
             json_decode($client->getResponse()->getContent(), true)['error'],
         );
     }
@@ -102,7 +102,7 @@ final class CompanyUserTokenRefreshPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertSame(
-            'Invalid refresh token.',
+            'El token de actualización no es válido.',
             json_decode($client->getResponse()->getContent(), true)['error'],
         );
     }

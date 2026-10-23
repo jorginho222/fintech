@@ -10,6 +10,6 @@ final class CreditRequestNotActivableException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Credit request cannot be confirmed from its current status.', 409);
+        parent::__construct('La solicitud de crédito no puede confirmarse en su estado actual.', 409);
     }
 }

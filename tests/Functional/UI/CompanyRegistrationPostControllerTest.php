@@ -106,7 +106,7 @@ final class CompanyRegistrationPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(422);
         self::assertContains(
-            'Password must contain at least one number.',
+            'La contraseña debe contener al menos un número.',
             json_decode($client->getResponse()->getContent(), true)['errors']['password'],
         );
     }

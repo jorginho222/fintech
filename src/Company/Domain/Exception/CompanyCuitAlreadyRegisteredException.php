@@ -10,6 +10,6 @@ final class CompanyCuitAlreadyRegisteredException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('A company with that CUIT is already registered.', 409);
+        parent::__construct('Ya existe una empresa registrada con ese CUIT.', 409);
     }
 }
