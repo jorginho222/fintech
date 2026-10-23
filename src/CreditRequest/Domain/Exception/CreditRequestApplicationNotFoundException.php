@@ -10,6 +10,6 @@ final class CreditRequestApplicationNotFoundException extends DomainHttpExceptio
 {
     public function __construct()
     {
-        parent::__construct('Credit request application not found.', 404);
+        parent::__construct('Solicitud de evaluación crediticia no encontrada.', 404);
     }
 }

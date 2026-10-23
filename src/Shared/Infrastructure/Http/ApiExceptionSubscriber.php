@@ -26,7 +26,7 @@ final class ApiExceptionSubscriber implements EventSubscriberInterface
 
         $response = match (true) {
             $e instanceof \JsonException => new JsonResponse(
-                ['error' => 'Invalid JSON body.'],
+                ['error' => 'El cuerpo de la solicitud no es un JSON válido.'],
                 Response::HTTP_BAD_REQUEST
             ),
             $e instanceof ValidationFailedException => $this->buildValidationResponse($e),

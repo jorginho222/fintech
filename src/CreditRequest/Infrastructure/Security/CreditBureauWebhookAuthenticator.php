@@ -39,7 +39,7 @@ final class CreditBureauWebhookAuthenticator extends AbstractAuthenticator
         $secret = $request->headers->get(self::HEADER, '');
 
         if ($this->webhookSecret === '' || !hash_equals($this->webhookSecret, $secret)) {
-            throw new CustomUserMessageAuthenticationException('Invalid webhook secret.');
+            throw new CustomUserMessageAuthenticationException('El secreto del webhook no es válido.');
         }
 
         return new SelfValidatingPassport(
@@ -57,6 +57,6 @@ final class CreditBureauWebhookAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        return new JsonResponse(['error' => 'Invalid webhook secret.'], Response::HTTP_UNAUTHORIZED);
+        return new JsonResponse(['error' => 'El secreto del webhook no es válido.'], Response::HTTP_UNAUTHORIZED);
     }
 }

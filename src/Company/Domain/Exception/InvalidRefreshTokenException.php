@@ -10,6 +10,6 @@ final class InvalidRefreshTokenException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Invalid refresh token.', 401);
+        parent::__construct('El token de actualización no es válido.', 401);
     }
 }

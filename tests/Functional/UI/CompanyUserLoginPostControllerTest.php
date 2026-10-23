@@ -92,7 +92,7 @@ final class CompanyUserLoginPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertSame(
-            'Invalid credentials.',
+            'Credenciales inválidas.',
             json_decode($client->getResponse()->getContent(), true)['error'],
         );
     }
@@ -109,7 +109,7 @@ final class CompanyUserLoginPostControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertSame(
-            'Invalid credentials.',
+            'Credenciales inválidas.',
             json_decode($client->getResponse()->getContent(), true)['error'],
         );
     }

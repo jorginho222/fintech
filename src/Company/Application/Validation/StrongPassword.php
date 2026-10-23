@@ -19,9 +19,9 @@ final class StrongPassword extends Compound
         return [
             new Assert\NotBlank(),
             new Assert\Length(min: 8, max: 4096),
-            new Assert\Regex(pattern: '/[A-Z]/', message: 'Password must contain at least one capital letter.'),
-            new Assert\Regex(pattern: '/\d/', message: 'Password must contain at least one number.'),
-            new Assert\Regex(pattern: '/[^A-Za-z\d]/', message: 'Password must contain at least one special character.'),
+            new Assert\Regex(pattern: '/[A-Z]/', message: 'La contraseña debe contener al menos una letra mayúscula.'),
+            new Assert\Regex(pattern: '/\d/', message: 'La contraseña debe contener al menos un número.'),
+            new Assert\Regex(pattern: '/[^A-Za-z\d]/', message: 'La contraseña debe contener al menos un carácter especial.'),
         ];
     }
 }

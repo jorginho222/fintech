@@ -10,6 +10,6 @@ final class InstallmentNotFoundException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Installment not found.', 404);
+        parent::__construct('Cuota no encontrada.', 404);
     }
 }

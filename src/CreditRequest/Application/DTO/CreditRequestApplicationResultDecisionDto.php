@@ -13,8 +13,8 @@ final class CreditRequestApplicationResultDecisionDto
     #[Assert\Choice(choices: ['APPROVED', 'REJECTED'])]
     public readonly string $status;
 
-    #[Assert\NotNull(message: 'score is required.')]
-    #[Assert\Type(type: 'numeric', message: 'score must be numeric.')]
+    #[Assert\NotNull(message: 'El campo score es obligatorio.')]
+    #[Assert\Type(type: 'numeric', message: 'El campo score debe ser numérico.')]
     public readonly int|float|string|null $score;
 
     public readonly ?float $assignedTna;
@@ -33,13 +33,13 @@ final class CreditRequestApplicationResultDecisionDto
     public function validateDecisionConsistency(ExecutionContextInterface $context): void
     {
         if ($this->status === 'APPROVED' && $this->assignedTna === null) {
-            $context->buildViolation('assignedTna is required when status is APPROVED.')
+            $context->buildViolation('El campo assignedTna es obligatorio cuando el estado es APPROVED.')
                 ->atPath('assignedTna')
                 ->addViolation();
         }
 
         if ($this->status === 'REJECTED' && $this->rejectionReason === null) {
-            $context->buildViolation('rejectionReason is required when status is REJECTED.')
+            $context->buildViolation('El campo rejectionReason es obligatorio cuando el estado es REJECTED.')
                 ->atPath('rejectionReason')
                 ->addViolation();
         }

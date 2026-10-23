@@ -43,7 +43,7 @@ final class TotalDebtSearchDto
         $currentMonth = (int) $today->format('n');
 
         if ($this->year < $currentYear || ($this->year === $currentYear && $this->month < $currentMonth)) {
-            $context->buildViolation('month/year must not be earlier than the current month and year.')
+            $context->buildViolation('El mes y año no pueden ser anteriores al mes y año actuales.')
                 ->atPath('month')
                 ->addViolation();
         }

@@ -10,6 +10,6 @@ final class CompanyNotFoundException extends DomainHttpException
 {
     public function __construct()
     {
-        parent::__construct('Company not found.', 404);
+        parent::__construct('Empresa no encontrada.', 404);
     }
 }
