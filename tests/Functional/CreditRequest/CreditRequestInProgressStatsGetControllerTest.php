@@ -143,7 +143,7 @@ final class CreditRequestInProgressStatsGetControllerTest extends WebTestCase
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
 
-        $creditRequest = new CreditRequest($id, '100000', '55', count($installmentStatuses), $em->find(Company::class, $companyId), $status);
+        $creditRequest = new CreditRequest($id, 'Crédito ' . $id, '100000', '55', count($installmentStatuses), $em->find(Company::class, $companyId), $status);
         $em->persist($creditRequest);
 
         foreach ($installmentStatuses as $index => $installmentStatus) {

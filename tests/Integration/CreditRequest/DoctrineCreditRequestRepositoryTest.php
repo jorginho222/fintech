@@ -93,7 +93,7 @@ final class DoctrineCreditRequestRepositoryTest extends KernelTestCase
      */
     private function creditRequest(string $id, Company $company, CreditRequestStatus $status, array $installmentStatuses = []): void
     {
-        $creditRequest = new CreditRequest($id, '100000', '55', max(1, count($installmentStatuses)), $company, $status);
+        $creditRequest = new CreditRequest($id, 'Crédito ' . $id, '100000', '55', max(1, count($installmentStatuses)), $company, $status);
         $this->em->persist($creditRequest);
 
         foreach ($installmentStatuses as $index => $installmentStatus) {

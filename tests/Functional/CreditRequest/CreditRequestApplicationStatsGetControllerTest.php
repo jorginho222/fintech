@@ -17,6 +17,8 @@ final class CreditRequestApplicationStatsGetControllerTest extends WebTestCase
     private const string APPLY_URL = '/api/v1/credit-request/apply';
     private const string STATS_URL = '/api/v1/credit-request-application/stats';
 
+    private int $applicationCount = 0;
+
     public function testReturnsTheTotalAndTheCountPerStatus(): void
     {
         $client = static::createClient();
@@ -118,6 +120,7 @@ final class CreditRequestApplicationStatsGetControllerTest extends WebTestCase
     ): array {
         $client->jsonRequest('POST', self::APPLY_URL, [
             'companyId'           => $companyId,
+            'reference'           => 'Solicitud ' . ++$this->applicationCount,
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ], self::bearer($token));

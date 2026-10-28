@@ -77,7 +77,7 @@ final class DoctrineCreditRequestApplicationRepositoryTest extends KernelTestCas
 
     private function application(string $id, Company $company, CreditRequestApplicationStatus $status): void
     {
-        $application = new CreditRequestApplication($id, '10000000', 12, $company);
+        $application = new CreditRequestApplication($id, 'Solicitud ' . $id, '10000000', 12, $company);
         match ($status) {
             CreditRequestApplicationStatus::EvaluationPending => null,
             CreditRequestApplicationStatus::Approved          => $application->approve(),
