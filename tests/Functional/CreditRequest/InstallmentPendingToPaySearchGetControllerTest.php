@@ -36,6 +36,7 @@ final class InstallmentPendingToPaySearchGetControllerTest extends WebTestCase
 
         $activeCreditRequest = new CreditRequest(
             'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            'Crédito 1',
             '100000',
             '55',
             3,
@@ -57,6 +58,7 @@ final class InstallmentPendingToPaySearchGetControllerTest extends WebTestCase
 
         $proposalCreditRequest = new CreditRequest(
             'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            'Crédito 2',
             '200000',
             '50',
             1,
@@ -69,6 +71,7 @@ final class InstallmentPendingToPaySearchGetControllerTest extends WebTestCase
 
         $otherCompanyCreditRequest = new CreditRequest(
             'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            'Crédito 3',
             '300000',
             '45',
             1,

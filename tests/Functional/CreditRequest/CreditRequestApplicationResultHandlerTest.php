@@ -34,6 +34,7 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
 
         $creditRequestApplication = new CreditRequestApplication(
             'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 1',
             '100000',
             6,
             $company,
@@ -62,10 +63,12 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
         self::assertSame(CreditRequestApplicationStatus::Approved, $updatedApplication->getStatus());
         self::assertNull($updatedApplication->getRejectionReason());
         self::assertNotNull($updatedApplication->getCreditRequest());
+        self::assertSame('Crédito 1', $updatedApplication->getCreditRequest()->getReference());
 
         $serializedApplication = (new CreditRequestApplicationSerializer())->serialize($updatedApplication);
         self::assertSame([
             'id' => $updatedApplication->getCreditRequest()->getId(),
+            'reference' => 'Crédito 1',
             'status' => 'proposal',
         ], $serializedApplication['creditRequest']);
 
@@ -89,6 +92,7 @@ final class CreditRequestApplicationResultHandlerTest extends KernelTestCase
 
         $creditRequestApplication = new CreditRequestApplication(
             'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            'Crédito 2',
             '100000',
             6,
             $company,

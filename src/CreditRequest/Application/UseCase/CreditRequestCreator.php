@@ -20,10 +20,11 @@ final class CreditRequestCreator
         private readonly InstallmentCalculator            $installmentCalculator,
     ) {}
 
-    public function execute(Company $company, int $amount, int $installmentQuantity, string $annualRate): CreditRequest
+    public function execute(Company $company, string $reference, int $amount, int $installmentQuantity, string $annualRate): CreditRequest
     {
         $creditRequest = new CreditRequest(
             Uuid::v4()->toRfc4122(),
+            $reference,
             (string) $amount,
             bcmul($annualRate, '100', 2),
             $installmentQuantity,

@@ -5,9 +5,13 @@
                   https://www.doctrine-project.org/schemas/orm/doctrine-mapping.xsd">
 
     <entity name="App\CreditRequest\Domain\Model\CreditRequest" table="credit_requests">
+        <unique-constraints>
+            <unique-constraint name="uniq_credit_requests_company_reference" columns="company_id,reference"/>
+        </unique-constraints>
         <id name="id" type="string" column="id">
             <generator strategy="NONE"/>
         </id>
+        <field name="reference" column="reference" type="string" length="60" nullable="false"/>
         <field name="totalAmount" column="total_amount" type="decimal" precision="14" scale="4" nullable="false"/>
         <field name="nominalInterestRate" column="nominal_interest_rate" type="decimal" precision="4" scale="2" nullable="false"/>
         <field name="installmentQuantity" column="installment_quantity" type="integer" nullable="false"/>

@@ -32,6 +32,7 @@ final class CreditRequestApplicationResultHandler
         if ($dto->decision->status === 'APPROVED') {
             $creditRequest = $this->creditRequestCreator->execute(
                 $creditRequestApplication->getCompany(),
+                $creditRequestApplication->getReference(),
                 (int) $creditRequestApplication->getAmount(),
                 $creditRequestApplication->getInstallmentQuantity(),
                 (string) $dto->decision->assignedTna,

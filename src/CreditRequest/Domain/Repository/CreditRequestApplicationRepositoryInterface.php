@@ -12,6 +12,8 @@ interface CreditRequestApplicationRepositoryInterface
 
     public function findById(string $id): ?CreditRequestApplication;
 
+    public function findByCompanyAndReference(string $companyId, string $reference): ?CreditRequestApplication;
+
     /**
      * @return list<CreditRequestApplication>
      */

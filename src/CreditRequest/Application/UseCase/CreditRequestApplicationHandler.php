@@ -30,7 +30,7 @@ final class CreditRequestApplicationHandler
             throw new CompanyNotFoundException();
         }
 
-        $creditRequestApplication = $this->creditRequestApplicationCreator->execute($company, $dto->amount, $dto->installmentQuantity);
+        $creditRequestApplication = $this->creditRequestApplicationCreator->execute($company, $dto->reference, $dto->amount, $dto->installmentQuantity);
 
         $this->messageBus->dispatch(new SimulateCreditRequestApplicationMessage($creditRequestApplication->getId()));
 
