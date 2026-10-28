@@ -50,3 +50,4 @@ Create a test file(s) in the ./tests folder for new feature, and create meaningf
 - Given applications belonging to another company, they are excluded from the counts.
 - Given a member user without the credit request application list permission, the endpoint denies access.
 - Repository-level test that the aggregated counts per status are computed correctly against the database.
+- Guard test that goes through every credit request application status and fails if one is added without extending the breakdown.
