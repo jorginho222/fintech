@@ -1,7 +1,13 @@
-# Plan: Dashboard Stats — Credit Request Applications Section
+# Plan: Dashboard Stats
 
 Spec: `_specs/dashboard-stats-spec.md`
 Branch: `claude/feature/dashboard-stats` (already created)
+
+Sections:
+- Part 1 — Credit request applications section (implemented in `bd56df7`)
+- Part 2 — Créditos en curso section (see the end of this file)
+
+# Part 1: Credit Request Applications Section
 
 ## Context
 
@@ -63,3 +69,65 @@ Note: the spec's Testing Guidelines don't yet list the guard test (3); add a lin
    - `bin/phpunit tests/Unit/CreditRequest/Application/UseCase/CreditRequestApplicationStatsCalculatorTest.php`
 2. `make test` — no regressions.
 3. Manually call `GET /api/v1/credit-request-application/stats` with a valid bearer token and confirm the response shape.
+
+---
+
+# Part 2: Créditos en curso Section
+
+## Context
+
+The dashboard gets a second section, "Créditos en curso", with two cards for the authenticated company's active credit requests: "Total creditos" (how many there are) and "Porcentaje pagado" (paid installments over all installments of those credits, pooled). It follows the same one-endpoint-per-section rule as Part 1.
+
+The spec also requires the "Créditos en curso" list to show only active credit requests, to match the stats. That's already the case: the frontend screen calls `GET /credit-request/search`, `CreditRequestSearcher` passes `CreditRequestStatus::Active`, and `tests/Functional/CreditRequest/CreditRequestSearchGetControllerTest.php` (`testSearchReturnsOnlyActiveCreditRequestsOwnedByTheAuthenticatedCompany`) covers it. **No change to the search.**
+
+Existing pieces this builds on:
+- `CreditRequestStatus` (`Proposal`, `ProposalExpired`, `Active`, `Paid`) and `InstallmentStatus` (`Pending`, `Paid`, `Overdue`), both string enum columns.
+- `CreditRequestRepositoryInterface` / `DoctrineCreditRequestRepository` — `search(companyId, status)` already scopes by `IDENTITY(creditRequest.company) = :companyId` and `creditRequest.status = :status`; the new queries use the same scoping. `Installment` maps `creditRequest` as many-to-one, so installments are joined through it.
+- Part 1's use case / DTO / controller trio is the structural template.
+
+## Approach
+
+### 1. Repository — two aggregate queries
+
+Add to `CreditRequestRepositoryInterface`:
+- `countByCompanyAndStatus(string $companyId, CreditRequestStatus $status): int` — `COUNT` of the company's credit requests in that status.
+- `countInstallmentsByStatus(string $companyId, CreditRequestStatus $creditRequestStatus): array` — `array<string, int>` keyed by installment status value, counting the installments of the company's credit requests in that credit request status (`GROUP BY installment.status`); statuses without installments are absent, like Part 1's `countByStatus()`.
+
+Implement both in `DoctrineCreditRequestRepository` with query builder aggregates (no entity loading).
+
+### 2. Output DTO — `src/CreditRequest/Application/DTO/CreditRequestInProgressStatsDto.php`
+
+Readonly: `int $total`, `?float $paidPercentage`.
+
+### 3. Use case — `src/CreditRequest/Application/UseCase/CreditRequestInProgressStatsCalculator.php`
+
+Injects `CreditRequestRepositoryInterface` and `AuthenticatedCompanyIdProviderInterface`. `execute(): CreditRequestInProgressStatsDto`, always with `CreditRequestStatus::Active`:
+- `total` = `countByCompanyAndStatus(companyId, Active)`.
+- Installment counts from `countInstallmentsByStatus(companyId, Active)`; `installmentTotal = array_sum(counts)`, `paid = counts[InstallmentStatus::Paid->value] ?? 0`.
+- `paidPercentage` = `null` when `installmentTotal === 0` (no active credits), otherwise `round($paid * 100 / $installmentTotal, 2)`.
+
+### 4. Controller — `src/CreditRequest/UI/Api/Controller/CreditRequestInProgressStatsGetController.php`
+
+- `#[IsGranted(Permission::CreditRequestList->value)]`
+- `#[Route('/credit-request/stats', name: 'credit_request_stats', methods: ['GET'], priority: 1)]` — `priority: 1` like `CreditRequestSearchGetController`, so `stats` isn't captured by `/credit-request/{id}` (`CreditRequestFindGetController`).
+- Returns `200` with `{"total": n, "paidPercentage": 37.5 | null}`.
+
+No changes to `config/routes.yaml`, `services.yaml` or migrations.
+
+## Testing
+
+1. **Functional** — `tests/Functional/CreditRequest/CreditRequestInProgressStatsGetControllerTest.php`, building credit requests and installments through `EntityManagerInterface` like `TotalDebtGetControllerTest`:
+   - Active credits with paid, pending and overdue installments → correct total and pooled percentage (installment counts chosen so pooling and per-credit averaging give different results).
+   - Proposal, expired proposal and paid credit requests (with installments) are excluded.
+   - No active credits → `{"total": 0, "paidPercentage": null}`.
+   - Another company's credit requests are excluded.
+   - Member without `credit_request.list` → `403`; with it → `200`. Unauthenticated → `401`.
+2. **Integration** — `tests/Integration/CreditRequest/DoctrineCreditRequestRepositoryTest.php`: both new methods return the right counts, filter by credit request status and company, and omit installment statuses without installments.
+3. **Unit** — `tests/Unit/CreditRequest/Application/UseCase/CreditRequestInProgressStatsCalculatorTest.php` with a stubbed repository: `null` with no installments, `0` with none paid, `100` with all paid, and rounding (1 of 3 → `33.33`).
+4. **Search** — no new test; the existing `CreditRequestSearchGetControllerTest` already asserts only active credit requests are returned.
+
+## Verification
+
+1. `make bash`, then run the three new test files with `bin/phpunit <path>`.
+2. `make test` — no regressions (including `CreditRequestSearchGetControllerTest` and `CreditRequestFindGetController` routes).
+3. Manually call `GET /api/v1/credit-request/stats` with a valid bearer token and confirm the response shape.
