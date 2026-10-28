@@ -33,6 +33,7 @@ final class DeleteExpiredCreditRequestProposalsCommandTest extends KernelTestCas
 
         $expiredCreditRequest = new CreditRequest(
             'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 1',
             '10000000',
             '60.00',
             12,
@@ -90,6 +91,7 @@ final class DeleteExpiredCreditRequestProposalsCommandTest extends KernelTestCas
 
         $recentlyExpiredCreditRequest = new CreditRequest(
             'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 2',
             '10000000',
             '60.00',
             12,

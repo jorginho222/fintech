@@ -34,6 +34,7 @@ final class CreditRequestApplicationUpdatePutControllerTest extends WebTestCase
 
         $creditRequestApplication = new CreditRequestApplication(
             'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 1',
             '100000',
             6,
             $company,

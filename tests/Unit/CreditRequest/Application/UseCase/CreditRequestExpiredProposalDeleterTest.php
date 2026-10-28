@@ -46,6 +46,7 @@ final class CreditRequestExpiredProposalDeleterTest extends TestCase
 
         return new CreditRequest(
             $id,
+            'Crédito 1',
             '10000000',
             '60.00',
             12,

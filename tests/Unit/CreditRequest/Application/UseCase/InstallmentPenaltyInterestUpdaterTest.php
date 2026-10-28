@@ -70,6 +70,7 @@ final class InstallmentPenaltyInterestUpdaterTest extends TestCase
 
         $creditRequest = new CreditRequest(
             'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 1',
             '10000000',
             '60.00',
             12,

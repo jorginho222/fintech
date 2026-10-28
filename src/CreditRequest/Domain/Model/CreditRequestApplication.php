@@ -11,9 +11,11 @@ class CreditRequestApplication
     private CreditRequestApplicationStatus $status;
     private ?CreditRequest $creditRequest;
     private ?string $rejectionReason;
+    private \DateTimeImmutable $createdAt;
 
     public function __construct(
         private string  $id,
+        private string  $reference,
         private string  $amount,
         private int     $installmentQuantity,
         private Company $company,
@@ -22,11 +24,17 @@ class CreditRequestApplication
         $this->status = CreditRequestApplicationStatus::EvaluationPending;
         $this->creditRequest = null;
         $this->rejectionReason = null;
+        $this->createdAt = new \DateTimeImmutable();
     }
 
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function getReference(): string
+    {
+        return $this->reference;
     }
 
     public function getAmount(): string
@@ -57,6 +65,11 @@ class CreditRequestApplication
     public function getRejectionReason(): ?string
     {
         return $this->rejectionReason;
+    }
+
+    public function getCreatedAt(): \DateTimeImmutable
+    {
+        return $this->createdAt;
     }
 
     public function approve(): void

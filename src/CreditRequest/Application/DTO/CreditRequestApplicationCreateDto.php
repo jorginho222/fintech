@@ -12,6 +12,10 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 final class CreditRequestApplicationCreateDto
 {
     #[Assert\NotBlank]
+    #[Assert\Length(max: 60)]
+    public readonly string $reference;
+
+    #[Assert\NotBlank]
     #[Assert\Positive]
     public readonly int $amount;
 
@@ -23,6 +27,7 @@ final class CreditRequestApplicationCreateDto
     {
         $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
 
+        $this->reference           = trim((string) ($data['reference'] ?? ''));
         $this->amount              = (int) ($data['amount'] ?? 0);
         $this->installmentQuantity = (int) ($data['installmentQuantity'] ?? 0);
 

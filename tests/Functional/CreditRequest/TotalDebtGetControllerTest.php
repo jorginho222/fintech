@@ -34,6 +34,7 @@ final class TotalDebtGetControllerTest extends WebTestCase
 
         $creditRequest = new CreditRequest(
             'aaaaaaaa-0000-4000-8000-000000000001',
+            'Crédito 1',
             '100000',
             '55',
             3,
@@ -79,6 +80,7 @@ final class TotalDebtGetControllerTest extends WebTestCase
 
         $creditRequest = new CreditRequest(
             'bbbbbbbb-0000-4000-8000-000000000001',
+            'Crédito 2',
             '100000',
             '55',
             3,
@@ -146,6 +148,7 @@ final class TotalDebtGetControllerTest extends WebTestCase
 
         $firstCreditRequest = new CreditRequest(
             'cccccccc-0000-4000-8000-000000000001',
+            'Crédito 3',
             '100000',
             '55',
             3,
@@ -158,6 +161,7 @@ final class TotalDebtGetControllerTest extends WebTestCase
 
         $secondCreditRequest = new CreditRequest(
             'cccccccc-0000-4000-8000-000000000003',
+            'Crédito 4',
             '200000',
             '50',
             1,

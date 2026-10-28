@@ -20,6 +20,7 @@ class CreditRequest
 
     public function __construct(
         private string              $id,
+        private string              $reference,
         private string              $totalAmount,
         private string              $nominalInterestRate,
         private int                 $installmentQuantity,
@@ -35,6 +36,11 @@ class CreditRequest
     public function getId(): string
     {
         return $this->id;
+    }
+
+    public function getReference(): string
+    {
+        return $this->reference;
     }
 
     public function getTotalAmount(): string
