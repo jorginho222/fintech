@@ -56,6 +56,41 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
             ->getResult();
     }
 
+    public function countByCompanyAndStatus(string $companyId, CreditRequestStatus $status): int
+    {
+        return (int) $this->em->createQueryBuilder()
+            ->select('COUNT(creditRequest.id)')
+            ->from(CreditRequest::class, 'creditRequest')
+            ->where('IDENTITY(creditRequest.company) = :companyId')
+            ->andWhere('creditRequest.status = :status')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('status', $status)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    public function countInstallmentsByStatus(string $companyId, CreditRequestStatus $creditRequestStatus): array
+    {
+        $rows = $this->em->createQueryBuilder()
+            ->select('installment.status AS status', 'COUNT(installment.id) AS installmentCount')
+            ->from(Installment::class, 'installment')
+            ->join('installment.creditRequest', 'creditRequest')
+            ->where('IDENTITY(creditRequest.company) = :companyId')
+            ->andWhere('creditRequest.status = :creditRequestStatus')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('creditRequestStatus', $creditRequestStatus)
+            ->groupBy('installment.status')
+            ->getQuery()
+            ->getArrayResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[$row['status']->value] = (int) $row['installmentCount'];
+        }
+
+        return $counts;
+    }
+
     public function findExpiredProposals(\DateTimeImmutable $now): array
     {
         return $this->em->createQueryBuilder()

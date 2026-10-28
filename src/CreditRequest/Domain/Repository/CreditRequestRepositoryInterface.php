@@ -25,6 +25,16 @@ interface CreditRequestRepositoryInterface
      */
     public function search(string $companyId, CreditRequestStatus $status): array;
 
+    public function countByCompanyAndStatus(string $companyId, CreditRequestStatus $status): int;
+
+    /**
+     * Counts the installments of the company's credit requests in the given status.
+     * Installment statuses without installments are left out.
+     *
+     * @return array<string, int> installment count keyed by installment status value
+     */
+    public function countInstallmentsByStatus(string $companyId, CreditRequestStatus $creditRequestStatus): array;
+
     /**
      * @return CreditRequest[]
      */
