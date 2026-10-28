@@ -22,6 +22,7 @@ final class InstallmentSerializer
             'dueDate' => $installment->getDueDate()?->format(\DateTimeInterface::ATOM),
             'status' => $installment->getStatus()->value,
             'creditRequestId' => $installment->getCreditRequest()->getId(),
+            'creditRequestReference' => $installment->getCreditRequest()->getReference(),
         ];
     }
 }

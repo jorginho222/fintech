@@ -21,6 +21,7 @@ final class CreditRequestSerializer
 
         return [
             'id' => $creditRequest->getId(),
+            'reference' => $creditRequest->getReference(),
             'status' => $creditRequest->getStatus()->value,
             'approvalLimitDate' => $creditRequest->getApprovalLimitDate()->format('d/m/y'),
             'totalAmount' => $creditRequest->getTotalAmount(),

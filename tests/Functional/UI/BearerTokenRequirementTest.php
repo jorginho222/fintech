@@ -28,6 +28,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client = static::createClient();
 
         $client->jsonRequest('POST', self::APPLY_URL, [
+            'reference'           => 'Capital de trabajo',
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ]);
@@ -42,7 +43,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['reference' => 'Capital de trabajo', 'amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer('garbage.token.value'),
         );
 
@@ -57,7 +58,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['reference' => 'Capital de trabajo', 'amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer($token),
         );
 
@@ -80,7 +81,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['reference' => 'Capital de trabajo', 'amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer($refreshToken),
         );
 
@@ -120,7 +121,7 @@ final class BearerTokenRequirementTest extends WebTestCase
         $client->jsonRequest(
             'POST',
             self::APPLY_URL,
-            ['amount' => 10_000_000, 'installmentQuantity' => 12],
+            ['reference' => 'Capital de trabajo', 'amount' => 10_000_000, 'installmentQuantity' => 12],
             self::bearer($expiredAccessToken),
         );
 

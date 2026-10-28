@@ -14,12 +14,15 @@ final class CreditRequestApplicationSerializer
 
         return [
             'id' => $creditRequestApplication->getId(),
+            'reference' => $creditRequestApplication->getReference(),
             'amount' => $creditRequestApplication->getAmount(),
             'installmentQuantity' => $creditRequestApplication->getInstallmentQuantity(),
             'status' => $creditRequestApplication->getStatus()->value,
             'rejectionReason' => $creditRequestApplication->getRejectionReason(),
+            'createdAt' => $creditRequestApplication->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'creditRequest' => $creditRequest === null ? null : [
                 'id' => $creditRequest->getId(),
+                'reference' => $creditRequest->getReference(),
                 'status' => $creditRequest->getStatus()->value,
             ],
             'company' => [

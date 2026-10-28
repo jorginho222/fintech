@@ -47,6 +47,7 @@ final class CreditRequestApplicationSearchGetControllerTest extends WebTestCase
     ): array {
         $client->jsonRequest('POST', self::APPLY_URL, [
             'companyId'           => $companyId,
+            'reference'           => 'Capital de trabajo',
             'amount'              => 10_000_000,
             'installmentQuantity' => 12,
         ], self::bearer($token));
