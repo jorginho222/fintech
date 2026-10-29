@@ -5,7 +5,8 @@ Branch: `claude/feature/dashboard-stats` (already created)
 
 Sections:
 - Part 1 — Credit request applications section (implemented in `bd56df7`)
-- Part 2 — Créditos en curso section (see the end of this file)
+- Part 2 — Créditos en curso section (implemented in `0f1dcd6`)
+- Part 3 — Pagos section (see the end of this file)
 
 # Part 1: Credit Request Applications Section
 
@@ -131,3 +132,72 @@ No changes to `config/routes.yaml`, `services.yaml` or migrations.
 1. `make bash`, then run the three new test files with `bin/phpunit <path>`.
 2. `make test` — no regressions (including `CreditRequestSearchGetControllerTest` and `CreditRequestFindGetController` routes).
 3. Manually call `GET /api/v1/credit-request/stats` with a valid bearer token and confirm the response shape.
+
+---
+
+# Part 3: Pagos Section
+
+## Context
+
+The dashboard gets a "Pagos" section with two lists for the authenticated company, in the payments calendar's format: "Pagos del mes" (pending installments due this month) and "Pagos vencidos" (overdue installments, any month), each with the total amount of its payments. Each payment shows amount, due date, "1/12" and the credit reference, linking to the pay screen. Per the spec, an installment is listed by its status, so an installment due earlier this month that is now overdue appears only under "Pagos vencidos".
+
+Existing pieces this builds on:
+- `InstallmentPendingToPaySearchGetController` (the payments calendar, `GET /installment/pending-to-pay/search`) — guarded by `Permission::PaymentCalendarView`, serializes with `InstallmentSerializer` and returns `{"totalAmount": "…", "installments": [...]}`, summing with `bcadd(…, 2)`. Not reused as an endpoint, since it mixes pending and overdue for a given month; each new list mirrors its response shape.
+- `InstallmentSerializer` (`src/CreditRequest/UI/Api/Serializer/InstallmentSerializer.php`) — already returns `id`, `periodNumber`, `totalAmount` (includes penalties), `dueDate`, `status`, `creditRequestId` and `creditRequestReference`. Only the payments calendar uses it.
+- `DoctrineCreditRequestRepository::findPendingInstallmentsToPay()` — the query pattern to follow: installments joined to their credit request, scoped by company and `CreditRequestStatus::Active`.
+- `TotalDebtCalculator` — resolves "today" with `new \DateTimeImmutable('today')`, uses the `first day of next month` idiom for an exclusive month end, and sums installment amounts in the use case with `array_reduce` + `bcadd(…, 2)`.
+
+## Approach
+
+### 1. Repository — installment search by status
+
+Add to `CreditRequestRepositoryInterface`:
+- `findActiveCreditInstallments(string $companyId, InstallmentStatus $status, ?\DateTimeImmutable $dueFrom = null, ?\DateTimeImmutable $dueBefore = null): array` — `Installment[]` of the company's **active** credit requests in that installment status; `dueFrom` inclusive and `dueBefore` exclusive when given. Ordered by `dueDate ASC`, then `periodNumber ASC`.
+
+Implement in `DoctrineCreditRequestRepository`, fetch-joining the credit request (`addSelect('creditRequest')`) so serializing the reference and installment count doesn't trigger one query per installment.
+
+### 2. Output DTO — `src/CreditRequest/Application/DTO/InstallmentPaymentsDashboardDto.php`
+
+Readonly: `array $monthPayments`, `string $monthTotalAmount`, `array $overduePayments`, `string $overdueTotalAmount` (lists are `Installment[]`; totals are decimal strings with two decimals).
+
+### 3. Use case — `src/CreditRequest/Application/UseCase/InstallmentPaymentsDashboardSearcher.php`
+
+Injects `CreditRequestRepositoryInterface` and `AuthenticatedCompanyIdProviderInterface`. `execute(): InstallmentPaymentsDashboardDto`:
+- `$monthStart = new \DateTimeImmutable('first day of this month midnight')`, `$monthEnd = $monthStart->modify('first day of next month')`.
+- `monthPayments` = `findActiveCreditInstallments(companyId, InstallmentStatus::Pending, $monthStart, $monthEnd)`.
+- `overduePayments` = `findActiveCreditInstallments(companyId, InstallmentStatus::Overdue)`.
+- Each total = `array_reduce` of `bcadd($total, $installment->getTotalAmount(), 2)` starting at `'0.00'`, as in `TotalDebtCalculator` (a small private helper used for both lists).
+
+### 4. Serializer — add the credit's installment count
+
+Add `'creditRequestInstallmentQuantity' => $installment->getCreditRequest()->getInstallmentQuantity()` to `InstallmentSerializer`, next to `creditRequestReference`. Additive, so the payments calendar response just gains the field.
+
+### 5. Controller — `src/CreditRequest/UI/Api/Controller/InstallmentPaymentsDashboardGetController.php`
+
+- `#[IsGranted(Permission::PaymentCalendarView->value)]`
+- `#[Route('/installment/dashboard-payments', name: 'installment_dashboard_payments', methods: ['GET'])]` — no clash with `/installment/{id}/pay` (different segment count and method).
+- Returns `200` with `{"monthPayments": {"totalAmount": "…", "installments": [...]}, "overduePayments": {"totalAmount": "…", "installments": [...]}}` — each list in the payments calendar's response shape, items serialized by `InstallmentSerializer`.
+
+No changes to `config/routes.yaml`, `services.yaml` or migrations.
+
+### 6. Frontend (out of this repo)
+
+The pay link is disabled without `installment.pay` + `credit_request.view`, reusing the payments calendar's `usePermissionGate(ROUTE_ACCESS.creditRequestPay.permissions)` and its link to `/credit_requests/pay?id=<creditRequestId>`. Done in `fintech-front`, not part of this backend implementation.
+
+## Testing
+
+1. **Functional** — `tests/Functional/CreditRequest/InstallmentPaymentsDashboardGetControllerTest.php`, building credit requests and installments via `EntityManagerInterface` like `CreditRequestInProgressStatsGetControllerTest`, with due dates relative to the current month (first day, last day, previous and next month) so the test doesn't depend on the run date:
+   - Pending this month (two, out of order) → in `monthPayments`, ordered by due date; overdue earlier this month and overdue from a previous month → only in `overduePayments`; pending next month and paid → in neither.
+   - Installments of a non-active credit request and of another company → in neither.
+   - Each list's `totalAmount` is the sum of its payments (amounts chosen so a wrong grouping would give a different total).
+   - No installments → both lists empty, both totals `'0.00'`.
+   - A payment exposes `totalAmount`, `dueDate`, `periodNumber`, `creditRequestInstallmentQuantity`, `creditRequestReference` and `creditRequestId`.
+   - Member without `payment_calendar.view` → `403`; with it → `200`. Unauthenticated → `401`.
+2. **Integration** — add to `tests/Integration/CreditRequest/DoctrineCreditRequestRepositoryTest.php`: `findActiveCreditInstallments()` filters by installment status, due date range (inclusive start, exclusive end), active credit status and company, and orders by due date.
+3. **Unit** — `tests/Unit/CreditRequest/Application/UseCase/InstallmentPaymentsDashboardSearcherTest.php` with a mocked repository: pending is searched within the current month's bounds, overdue without date bounds, and each total sums its own list (`'0.00'` when empty).
+
+## Verification
+
+1. `make bash`, then run the new test files with `bin/phpunit <path>`.
+2. `make test` — no regressions (notably `InstallmentPendingToPaySearchGetControllerTest`, since the serializer gains a field).
+3. Manually call `GET /api/v1/installment/dashboard-payments` with a valid bearer token and confirm the response shape.

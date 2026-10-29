@@ -3,10 +3,11 @@
 branch: claude/feature/dashboard-stats
 
 ## Summary
-Add backend endpoints that serve the figures shown on the application dashboard, with one endpoint per dashboard section so each section can be guarded by the permission of the resource it summarizes. Further sections are added as their own endpoints in the module they belong to. This spec covers two sections, both for the authenticated company:
+Add backend endpoints that serve the figures shown on the application dashboard, with one endpoint per dashboard section so each section can be guarded by the permission of the resource it summarizes. Further sections are added as their own endpoints in the module they belong to. This spec covers three sections, all for the authenticated company:
 
 - **Credit request applications** (implemented): the total number of credit request applications together with a breakdown by status (approved, rejected and pending evaluation), counted over all time.
 - **Créditos en curso** (credit requests in progress): figures about the company's active credit requests — how many there are ("Total creditos") and what percentage of their installments has been paid ("Porcentaje pagado"). Only credit requests in the active status count, the same ones listed on the "Créditos en curso" screen, so the dashboard and that list are always consistent.
+- **Pagos** (payments): two lists of installments to pay, in the same format as the payments calendar. "Pagos del mes" lists the installments still pending that are due in the current month; "Pagos vencidos" lists the overdue installments, whatever month they were due in. Each list shows the total amount of its payments, and each payment shows its amount, its due date, its position in the credit ("1/12") and the credit reference, with a link to pay it.
 
 ## Functional Requirements
 
@@ -42,6 +43,25 @@ Add backend endpoints that serve the figures shown on the application dashboard,
 - Access is guarded by the existing credit request list permission (the same one that guards the "Créditos en curso" list). No new permission is added.
 - The credit request search used by the "Créditos en curso" screen must only return active credit requests, so the list matches the stats. The existing search already filters by the active status; this requirement keeps it that way and no change is expected.
 
+### Pagos section
+- Add a payments dashboard endpoint in the CreditRequest module that returns both lists of the section in one response:
+  - **Pagos del mes**: installments in the pending status whose due date falls in the current calendar month (from the first to the last day of the month, inclusive).
+  - **Pagos vencidos**: installments in the overdue status, whatever their due date.
+- Each installment appears in at most one list, decided by its status: an installment due earlier this month that is now overdue is listed only under "Pagos vencidos"; paid installments are never listed.
+- Only installments of active credit requests are listed, consistent with the "Créditos en curso" section and the payments calendar.
+- Each payment in either list includes:
+  - the amount to pay (the installment's total amount, which already includes any late-payment penalty)
+  - the due date
+  - the installment number and the credit's installment count, so the frontend can show "1/12"
+  - the credit reference
+  - the identifiers the frontend needs to link to the pay screen (the installment and its credit request)
+- The payment format matches the one already used by the payments calendar; it only adds the credit's installment count.
+- Both lists are ordered by due date, oldest first.
+- Each list includes the total amount of its payments (the sum of their amounts), in the same format as the payments calendar's monthly total.
+- An empty list (with a total of zero) is returned, not an error, when there are no payments of that kind.
+- Access is guarded by the existing payment calendar view permission. No new permission is added.
+- Frontend: the link to pay each payment is disabled when the user lacks the permissions the pay screen requires (installment pay and credit request view, as on the payments calendar). The backend already rejects payments from users without the installment pay permission.
+
 ## Possible Edge Cases
 
 ### Credit request applications section
@@ -63,6 +83,19 @@ Add backend endpoints that serve the figures shown on the application dashboard,
 - A member user without the credit request list permission calls the endpoint: access is denied, without affecting other dashboard sections.
 - An unauthenticated request is rejected.
 
+### Pagos section
+- Company has no installments to pay: both lists are empty and both totals are zero.
+- An installment due earlier this month that is now overdue appears only in "Pagos vencidos".
+- An installment overdue from a previous month appears in "Pagos vencidos".
+- A pending installment due next month (or later) appears in neither list.
+- A pending installment due this month whose due date has passed but that hasn't been marked overdue yet is still pending, so it stays in "Pagos del mes" until it's marked overdue.
+- Paid installments never appear.
+- Installments of credit requests that aren't active never appear.
+- Another company's installments never appear.
+- A member user without the payment calendar view permission calls the endpoint: access is denied, without affecting other dashboard sections.
+- A member user with the payment calendar view permission but without the installment pay permission sees both lists, with the pay links disabled.
+- An unauthenticated request is rejected.
+
 ## Acceptance Criteria
 
 ### Credit request applications section
@@ -82,6 +115,15 @@ Add backend endpoints that serve the figures shown on the application dashboard,
 - Users without the credit request list permission are denied access; unauthenticated requests are rejected.
 - The "Créditos en curso" search still returns only active credit requests.
 
+### Pagos section
+- An endpoint exists that returns, for the authenticated company, the pending installments due in the current month and the overdue installments, as two lists.
+- No installment appears in both lists.
+- Each payment includes its amount, due date, installment number, the credit's installment count, the credit reference and the identifiers needed to link to the pay screen.
+- Both lists are ordered by due date, oldest first, and each includes the total amount of its payments.
+- Only installments of the company's active credit requests are listed.
+- Users without the payment calendar view permission are denied access; unauthenticated requests are rejected.
+- In the frontend, the pay link is disabled for users without the permissions required by the pay screen.
+
 ## Open questions
 - Which permission should guard the credit request applications endpoint: reuse the existing credit request application list permission, or add a new dedicated dashboard permission? Reuse the existing credit request application list permission.
 - Should the counts cover all time, or should the endpoint accept an optional date range? For now, cover all time.
@@ -89,6 +131,10 @@ Add backend endpoints that serve the figures shown on the application dashboard,
 - How should "Porcentaje pagado" be calculated across the active credits: pooling all installments, or averaging each credit's percentage? Pool all installments.
 - What should "Porcentaje pagado" be when the company has no active credits? Null, so the frontend shows "-" next to "Total creditos: 0".
 - How precise should the percentage be? Two decimals.
+
+- Should an installment due earlier this month that is now overdue appear in "Pagos del mes", "Pagos vencidos" or both? Only in "Pagos vencidos"; "Pagos del mes" lists only pending installments.
+- Should the payments section reuse the payments calendar endpoint, or get its own endpoint? Its own endpoint, guarded by the payment calendar view permission.
+- Should each payments list show a total amount? Yes, each list includes the total of its payments; each payment also shows its due date.
 
 ## Testing Guidelines
 Create a test file(s) in the ./tests folder for new feature, and create meaningful test for the following cases, without going too heavy:
@@ -109,3 +155,14 @@ Create a test file(s) in the ./tests folder for new feature, and create meaningf
 - Given credit requests belonging to another company, they are excluded.
 - Given a member user without the credit request list permission, the endpoint denies access.
 - Repository-level test that the active credit count and installment counts are computed correctly against the database.
+
+### Pagos section
+- Given pending and overdue installments in and out of the current month, "Pagos del mes" contains only the pending ones due this month and "Pagos vencidos" contains every overdue one, each ordered by due date.
+- Given an installment due earlier this month that is now overdue, it appears only in "Pagos vencidos".
+- Given paid installments and installments of credit requests that aren't active, they appear in neither list.
+- Given no installments to pay, both lists are empty and both totals are zero.
+- Each list's total is the sum of its payments' amounts.
+- Given installments belonging to another company, they are excluded.
+- Each payment includes the amount, due date, installment number, the credit's installment count, the credit reference and the credit request identifier.
+- Given a member user without the payment calendar view permission, the endpoint denies access.
+- Repository-level test that the installment search filters by status, due date range, active credit requests and company, ordered by due date.
