@@ -46,4 +46,23 @@ class DoctrineCreditRequestApplicationRepository implements CreditRequestApplica
             ->getQuery()
             ->getResult();
     }
+
+    public function countByStatus(string $companyId): array
+    {
+        $rows = $this->em->createQueryBuilder()
+            ->select('creditRequestApplication.status AS status', 'COUNT(creditRequestApplication.id) AS applicationCount')
+            ->from(CreditRequestApplication::class, 'creditRequestApplication')
+            ->where('IDENTITY(creditRequestApplication.company) = :companyId')
+            ->setParameter('companyId', $companyId)
+            ->groupBy('creditRequestApplication.status')
+            ->getQuery()
+            ->getArrayResult();
+
+        $counts = [];
+        foreach ($rows as $row) {
+            $counts[$row['status']->value] = (int) $row['applicationCount'];
+        }
+
+        return $counts;
+    }
 }
