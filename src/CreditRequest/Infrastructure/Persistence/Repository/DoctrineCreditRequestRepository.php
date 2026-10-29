@@ -91,6 +91,35 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         return $counts;
     }
 
+    public function findActiveCreditInstallments(
+        string $companyId,
+        InstallmentStatus $status,
+        ?\DateTimeImmutable $dueFrom = null,
+        ?\DateTimeImmutable $dueBefore = null,
+    ): array {
+        $queryBuilder = $this->em->createQueryBuilder()
+            ->select('installment', 'creditRequest')
+            ->from(Installment::class, 'installment')
+            ->join('installment.creditRequest', 'creditRequest')
+            ->where('IDENTITY(creditRequest.company) = :companyId')
+            ->andWhere('creditRequest.status = :creditRequestStatus')
+            ->andWhere('installment.status = :status')
+            ->setParameter('companyId', $companyId)
+            ->setParameter('creditRequestStatus', CreditRequestStatus::Active)
+            ->setParameter('status', $status)
+            ->orderBy('installment.dueDate', 'ASC')
+            ->addOrderBy('installment.periodNumber', 'ASC');
+
+        if ($dueFrom !== null) {
+            $queryBuilder->andWhere('installment.dueDate >= :dueFrom')->setParameter('dueFrom', $dueFrom);
+        }
+        if ($dueBefore !== null) {
+            $queryBuilder->andWhere('installment.dueDate < :dueBefore')->setParameter('dueBefore', $dueBefore);
+        }
+
+        return $queryBuilder->getQuery()->getResult();
+    }
+
     public function findExpiredProposals(\DateTimeImmutable $now): array
     {
         return $this->em->createQueryBuilder()

@@ -7,6 +7,7 @@ namespace App\CreditRequest\Domain\Repository;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
+use App\CreditRequest\Domain\Model\InstallmentStatus;
 
 interface CreditRequestRepositoryInterface
 {
@@ -34,6 +35,19 @@ interface CreditRequestRepositoryInterface
      * @return array<string, int> installment count keyed by installment status value
      */
     public function countInstallmentsByStatus(string $companyId, CreditRequestStatus $creditRequestStatus): array;
+
+    /**
+     * Installments of the company's active credit requests in the given status, ordered by due date.
+     * $dueFrom is inclusive and $dueBefore exclusive; a null bound is not applied.
+     *
+     * @return Installment[]
+     */
+    public function findActiveCreditInstallments(
+        string $companyId,
+        InstallmentStatus $status,
+        ?\DateTimeImmutable $dueFrom = null,
+        ?\DateTimeImmutable $dueBefore = null,
+    ): array;
 
     /**
      * @return CreditRequest[]

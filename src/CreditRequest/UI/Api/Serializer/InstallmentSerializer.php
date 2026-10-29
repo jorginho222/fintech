@@ -23,6 +23,7 @@ final class InstallmentSerializer
             'status' => $installment->getStatus()->value,
             'creditRequestId' => $installment->getCreditRequest()->getId(),
             'creditRequestReference' => $installment->getCreditRequest()->getReference(),
+            'creditRequestInstallmentQuantity' => $installment->getCreditRequest()->getInstallmentQuantity(),
         ];
     }
 }
