@@ -176,6 +176,20 @@ Add `lastPaymentAttemptStatus` (`?->value`) and `lastPaymentAttemptAt` (ATOM or 
 - `CLAUDE.md`: add `mailpit:8025` to the `make up` line's list of containers.
 - No production impact: production sets its own `MAILER_DSN`.
 
+### 13. README
+
+Update `README.md` in the same branch as the code (env and services rows are in step 12):
+- **Features:**
+  - "Credit requests and installments": paying is now requested and confirmed asynchronously.
+  - New "Installment payment webhook" entry: the payment is sent through RabbitMQ to the payment service, which reports the result back, authenticated with a shared secret.
+  - New "Email notifications" entry: the company is emailed about the payment flow, overdue installments, fully paid credits and upcoming due dates.
+  - "Scheduled jobs": add the hourly payment timeout and the daily due date reminder.
+- **Permissions table:** `installment.pay` description becomes "Request an installment payment".
+- **API overview:**
+  - Replace `PUT /installment/{id}/pay` with `PUT /installment/{id}/pay-request` | Request an installment payment | `installment.pay`.
+  - Add `PUT /installment-payment-update` | Payment service webhook (shared-secret auth) | —.
+  - Add `GET /installment/dashboard-payments` | List the dashboard's month, overdue and processing payments | `payment_calendar.view` (missing from the README today, and its response changes in this feature).
+
 ## Testing
 
 1. **Unit — `Installment`**: new `tests/Unit/CreditRequest/Domain/Model/InstallmentTest.php`:
