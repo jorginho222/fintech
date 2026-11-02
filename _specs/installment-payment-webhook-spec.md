@@ -19,7 +19,7 @@ New flow:
    - **Processing failed**: the service could not process the payment. The attempt becomes processing failed ("No se pudo procesar el pago") and is handled like a rejection: the installment keeps its status and the user can try again.
 6. A scheduled task marks as **processing timeout** every attempt still processing after 72 business hours, so the UI can tell the user and let them retry. A result that arrives late, after the timeout, is still applied.
 
-Installments with a payment processing are always listed in the dashboard "Pagos del mes" and in the payments calendar, and counted in their total amounts, flagged so the frontend can show that the payment is awaiting confirmation.
+Installments with a payment processing are listed in a separate "Pagos en proceso" list in the dashboard, with its own total, so the frontend can show that the payment is awaiting confirmation. They are not listed in the payments calendar, nor counted in its total. They are still counted in the total debt, because they stay unpaid until approved.
 
 The company is notified by email, asynchronously, at every step of the payment flow (payment submitted, approved, rejected, processing failed, timed out), when an installment becomes overdue, when a credit request is fully paid, and a few days before an installment's due date.
 
@@ -95,19 +95,20 @@ The company is notified by email, asynchronously, at every step of the payment f
 - A pending installment past its due date is marked overdue, with its penalty, when it has no attempt or its last attempt is rejected, processing_failed or processing_timeout. It keeps its last attempt, so the UI can show it as overdue with a rejected (or failed, or timed out) payment.
 
 ### Dashboard "Pagos" section
-- **Pagos del mes** lists:
-  - pending installments due in the current month (as today),
-  - every installment whose last payment attempt is processing, whatever its due date or status.
-- **Pagos vencidos** lists overdue installments (as today), except those whose last attempt is processing (they are listed in "Pagos del mes" instead).
+- **Pagos del mes** lists pending installments due in the current month (as today), except those whose last attempt is processing.
+- **Pagos vencidos** lists overdue installments (as today), except those whose last attempt is processing.
+- **Pagos en proceso** (new list, `processingPayments` in the response, same shape as the other two) lists every installment of an active credit request whose last payment attempt is processing, whatever its due date or status.
 - Each installment still appears in at most one list; paid installments are never listed.
-- Each list's total amount is the sum of all its listed payments; processing payments are counted in the "Pagos del mes" total.
-- Each payment includes its last payment attempt (status and date), so the frontend can flag it as "Pago en proceso de confirmación", "Pago rechazado", "No se pudo procesar el pago" (processing failed) or "No se pudo confirmar el pago" (processing timeout), and hide or disable the pay link while it is processing.
+- Each list's total amount is the sum of all its listed payments; processing payments are only counted in the "Pagos en proceso" total.
+- Each payment includes its last payment attempt (status and date), so the frontend can show it as "Pago en proceso de confirmación", "Pago rechazado", "No se pudo procesar el pago" (processing failed) or "No se pudo confirmar el pago" (processing timeout).
 
 ### Payments calendar
 - The calendar keeps listing pending and overdue installments with the same due-date rules as today, now including their last payment attempt.
-- Installments whose last payment attempt is processing are always listed, regardless of status, so a pending payment is never hidden: in the month of their due date, and an overdue one in the same period where overdue installments are listed today.
-- Processing payments are counted in the calendar's total amount.
+- Installments whose last payment attempt is processing are not listed, whatever their status or due date, and are not counted in the calendar's total amount. They return to the calendar if the payment is rejected, fails or times out.
 - Each installment includes its last payment attempt, so the frontend can flag it the same way as in the dashboard.
+
+### Total debt
+- The total debt is unchanged: installments whose last payment attempt is processing are still counted, because they stay unpaid until a payment is approved.
 
 ### Email notifications
 - Emails are sent to the company's email address (the one already used for the credit request proposal expiration email). Users have no email address of their own today, so the "users with the installment pay permission" recipients are left for a future iteration (see Open questions).
@@ -174,7 +175,9 @@ The company is notified by email, asynchronously, at every step of the payment f
 - Malformed result payloads get a 4xx response and are not queued.
 - The scheduled task marks processing attempts older than 72 business hours as processing_timeout and leaves newer ones untouched.
 - The overdue marker skips installments with a processing attempt and marks past-due pending installments with no attempt, a rejected, a failed or a timed out attempt as overdue.
-- The dashboard "Pagos del mes" list and the payments calendar always include installments with a processing attempt, and count them in their total amounts; every listed installment includes its last payment attempt.
+- The dashboard lists installments with a processing attempt only in `processingPayments`, and counts them only in its total amount; "Pagos del mes" and "Pagos vencidos" exclude them from their lists and totals.
+- The payments calendar excludes installments with a processing attempt from its list and total amount; the total debt still counts them.
+- Every installment listed in the dashboard and the payments calendar includes its last payment attempt.
 - Each event in the email notifications table queues one email in Spanish to the company's email address, from the no-reply address, identifying the installment (or the credit request for the fully paid email); ignored results queue none.
 - Emails are queued on the async transport, not sent during the request or task that triggers them.
 - Payment result emails are queued only once the result's transaction has committed; a failed commit queues no email.
@@ -191,7 +194,7 @@ Create a test file(s) in the ./tests folder for new feature, and create meaningf
 - Unit: payment result handler — approved pays the installment and marks the credit request paid when it was the last one; a late approval after timeout still pays; rejected and processing failed only update the attempt.
 - Functional: pay request endpoint returns 202 with the processing attempt and queues the payment request message; a second pay attempt returns the Spanish error.
 - Functional: payment result endpoint returns 202 for a valid payload and queues the result message; returns 4xx for malformed payloads.
-- Functional/Integration: dashboard "Pagos" endpoint and payments calendar always include installments with a processing attempt, in the right list and in the total amount, with their last payment attempt.
+- Functional/Integration: dashboard "Pagos" endpoint lists installments with a processing attempt only in `processingPayments` and its total; payments calendar excludes them from its list and total; total debt still counts them; listed installments include their last payment attempt.
 - Unit: email sending use case builds the email with the given sender, recipient, subject and text.
 - Unit: each payment flow use case (pay request, result handler, timeout task, overdue marker) notifies the right event, and an ignored result notifies nothing; payment result emails are not queued when the transaction fails; an approved last installment also notifies the credit request as paid.
 - Unit: due date reminder task selects pending installments due in 3 days and skips processing ones.

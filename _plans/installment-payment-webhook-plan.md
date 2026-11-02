@@ -87,14 +87,14 @@ Callers build it with named arguments, e.g. `new InstallmentSearchCriteria(compa
 
   | Caller | Criteria |
   |---|---|
-  | Dashboard "Pagos del mes" (pending part) | company, `Active`, `Pending`, `dueFrom` month start, `dueBefore` next month start, exclude `Processing` |
+  | Dashboard "Pagos del mes" | company, `Active`, `Pending`, `dueFrom` month start, `dueBefore` next month start, exclude `Processing` |
   | Dashboard processing payments | company, `Active`, attempt `Processing` |
   | Dashboard "Pagos vencidos" | company, `Active`, `Overdue`, exclude `Processing` |
   | `InstallmentOverdueMarker` | `Pending`, `dueBefore` now, exclude `Processing` (all companies and credit statuses, as today) |
   | `InstallmentPaymentAttemptTimeoutMarker` | attempt `Processing` (all companies) |
 
   Excluding processing in the overdue marker's criteria keeps the penalty updater from running on them; the domain guard in `markOverdue()` stays as a safety net.
-- **Keep** `findPendingInstallmentsToPay()` as is. Its "overdue at any date OR pending in the period" condition doesn't fit AND-only criteria, `TotalDebtCalculator` also depends on it, and this feature doesn't need it changed: an installment with a processing attempt is always pending or overdue, so the calendar's existing rules already list it (covered by a test).
+- **Keep** `findPendingInstallmentsToPay()` as is. Its "overdue at any date OR pending in the period" condition doesn't fit AND-only criteria, and `TotalDebtCalculator` depends on it and must keep counting processing installments. The calendar excludes them in its use case instead (step 9).
 - **Keep** `countByCompanyAndStatus()` / `countInstallmentsByStatus()` (aggregates, not lists).
 
 Migration: `bin/console doctrine:migrations:diff`, review that it only adds the three nullable columns to `installments` (no backfill).
@@ -132,11 +132,14 @@ Migration: `bin/console doctrine:migrations:diff`, review that it only adds the 
 ### 9. Dashboard "Pagos" section
 
 `InstallmentPaymentsDashboardSearcher`:
-- `monthPayments` = `searchInstallments()` for pending installments due this month excluding processing, merged with `searchInstallments()` for processing installments, sorted by due date then period number (criteria in the table in step 5). The exclusion avoids listing a processing installment due this month twice; two searches are needed because "pending in the month OR processing" is an OR.
+- `monthPayments` = `searchInstallments()` for pending installments due this month excluding processing (criteria in the table in step 5).
 - `overduePayments` = `searchInstallments()` for overdue installments excluding processing.
-- Totals keep using `sumTotalAmounts()`, so processing payments count in the "Pagos del mes" total.
+- `processingPayments` = `searchInstallments()` for processing installments.
+- Totals keep using `sumTotalAmounts()`, one per list.
 
-The calendar (`InstallmentPendingToPaySearcher`) needs no change (see step 5).
+`InstallmentPaymentsDashboardDto` adds `processingPayments` and `processingTotalAmount`, and `InstallmentPaymentsDashboardGetController` adds `processingPayments` to the response through `serializeList()`.
+
+**Payments calendar.** `InstallmentPendingToPaySearcher` filters the `findPendingInstallmentsToPay()` result with `!$installment->isPaymentProcessing()`, wrapped in `array_values()` so the controller's `array_map` still produces a JSON list. The controller computes its total from that result, so processing payments leave the total too and the controller doesn't change. `TotalDebtCalculator` doesn't use this use case, so it keeps counting them.
 
 ### 10. Serialization
 
@@ -185,11 +188,11 @@ Add `lastPaymentAttemptStatus` (`?->value`) and `lastPaymentAttemptAt` (ATOM or 
 2. **Unit — `BusinessHoursCalculatorTest`**: weekday-only span; Friday 10:00 + 72 → Wednesday 10:00; start on Saturday → counts from Monday 00:00.
 3. **Unit — `InstallmentPaymentAttemptTimeoutMarkerTest`**: stubbed repository; attempts older than the limit time out, newer ones are untouched.
 4. **Unit — `InstallmentPaymentResultHandlerTest`**: approved pays and calls the paid checker (last installment → credit request paid); late approval after timeout still pays; rejected and processing failed only update the attempt (processing failed stores the error message); result for a paid installment writes nothing; unknown installment throws. Replaces `InstallmentToPaidUpdaterTest` (deleted).
-5. **Unit — `InstallmentPaymentsDashboardSearcherTest`**: switch the mocked method to `searchInstallments`, asserting the criteria passed; processing installments are merged into the month list (sorted) and excluded from overdue.
+5. **Unit — `InstallmentPaymentsDashboardSearcherTest`**: switch the mocked method to `searchInstallments`, asserting the criteria passed for each of the three lists; each list has its own total.
 6. **Functional — new `InstallmentPayRequestPutControllerTest`** (`PUT /api/v1/installment/{id}/pay-request`): `202`, installment has a processing attempt, `RequestInstallmentPaymentMessage` is in the `async` in-memory transport; second call → `409` with the Spanish message; another company's installment → `404`; member without `installment.pay` → `403`.
 7. **Functional — new `InstallmentPaymentUpdatePutControllerTest`** (modeled on `CreditRequestApplicationUpdatePutControllerTest`): valid payload + secret → `202` and message queued, nothing applied synchronously; wrong/missing secret → `401`; invalid `status`, missing `installmentId`, or `PROCESSING_FAILED` without `errorMessage` → `4xx`, nothing queued.
 8. **Functional — `MarkOverdueInstallmentsCommandTest`**: add cases — past-due pending with processing attempt is not marked; with rejected / processing failed / timeout attempt it is.
-9. **Functional — `InstallmentPaymentsDashboardGetControllerTest` / `InstallmentPendingToPaySearchGetControllerTest`**: processing installment (overdue, and due in another month) listed under `monthPayments` and counted in its total; calendar lists processing installments and both responses expose `lastPaymentAttemptStatus` / `lastPaymentAttemptAt`.
+9. **Functional — `InstallmentPaymentsDashboardGetControllerTest` / `InstallmentPendingToPaySearchGetControllerTest`**: processing installment (overdue, and due this month) listed only under `processingPayments` and counted only in its total; calendar omits processing installments from its list and total, and still returns `installments` as a JSON list; both responses expose `lastPaymentAttemptStatus` / `lastPaymentAttemptAt`. Total debt test: a processing installment is still counted.
 10. **Integration — `DoctrineCreditRequestRepositoryTest`**: port the existing `findActiveCreditInstallments` tests to `searchInstallments()`, and add: each criterion filters on its own (company, credit request status, status, due range, attempt status); `excludedPaymentAttemptStatus` keeps installments with a `null` attempt; empty criteria returns all installments, ordered by due date.
 11. **Unit — `EmailSenderTest`**: mocked `MailerInterface` receives an `Email` with the given from, to, subject and text.
 12. **Unit — `InstallmentPaymentMailerTest`** (like `CreditRequestProposalExpirationMailerTest`): one or two representative events — recipient is the company email, sender is the no-reply address, Spanish subject, body contains reference, `3/12`, amount and due date; the processing failed email does not contain the stored error message.
