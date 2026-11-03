@@ -21,6 +21,8 @@ final class InstallmentSerializer
             'penaltyIva21Tax' => $installment->getPenaltyIva21Tax(),
             'dueDate' => $installment->getDueDate()?->format(\DateTimeInterface::ATOM),
             'status' => $installment->getStatus()->value,
+            'lastPaymentAttemptStatus' => $installment->getLastPaymentAttemptStatus()?->value,
+            'lastPaymentAttemptAt' => $installment->getLastPaymentAttemptAt()?->format(\DateTimeInterface::ATOM),
             'creditRequestId' => $installment->getCreditRequest()->getId(),
             'creditRequestReference' => $installment->getCreditRequest()->getReference(),
             'creditRequestInstallmentQuantity' => $installment->getCreditRequest()->getInstallmentQuantity(),

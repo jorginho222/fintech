@@ -10,8 +10,10 @@ use App\Company\Domain\Repository\CompanyRepositoryInterface;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
+use App\CreditRequest\Domain\Model\InstallmentPaymentAttemptStatus;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
+use App\CreditRequest\Domain\Repository\InstallmentSearchCriteria;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -98,12 +100,13 @@ final class DoctrineCreditRequestRepositoryTest extends KernelTestCase
         $this->em->flush();
         $this->em->clear();
 
-        $installments = $this->creditRequestRepository->findActiveCreditInstallments(
-            $companyA->getId(),
-            InstallmentStatus::Pending,
-            new \DateTimeImmutable('2026-10-01'),
-            new \DateTimeImmutable('2026-11-01'),
-        );
+        $installments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria(
+            companyId: $companyA->getId(),
+            creditRequestStatus: CreditRequestStatus::Active,
+            status: InstallmentStatus::Pending,
+            dueFrom: new \DateTimeImmutable('2026-10-01'),
+            dueBefore: new \DateTimeImmutable('2026-11-01'),
+        ));
 
         self::assertSame([$firstDay, $lastDay], array_map(static fn (Installment $installment): string => $installment->getId(), $installments));
     }
@@ -118,9 +121,65 @@ final class DoctrineCreditRequestRepositoryTest extends KernelTestCase
         $this->em->flush();
         $this->em->clear();
 
-        $installments = $this->creditRequestRepository->findActiveCreditInstallments($company->getId(), InstallmentStatus::Overdue);
+        $installments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria(
+            companyId: $company->getId(),
+            creditRequestStatus: CreditRequestStatus::Active,
+            status: InstallmentStatus::Overdue,
+        ));
 
         self::assertSame([$old, $recent], array_map(static fn (Installment $installment): string => $installment->getId(), $installments));
+    }
+
+    public function testSearchesInstallmentsByPaymentAttemptStatusAcrossCompanies(): void
+    {
+        $companyA = $this->company('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', '20123456789');
+        $companyB = $this->company('bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb', '30987654321');
+        $creditA  = $this->creditRequest('10000000-0000-4000-8000-000000000000', $companyA, CreditRequestStatus::Active);
+        $creditB  = $this->creditRequest('20000000-0000-4000-8000-000000000000', $companyB, CreditRequestStatus::Paid);
+        $processingA = $this->dueInstallment($creditA, 1, InstallmentStatus::Pending, '2026-10-05', InstallmentPaymentAttemptStatus::Processing);
+        $processingB = $this->dueInstallment($creditB, 1, InstallmentStatus::Overdue, '2026-10-06', InstallmentPaymentAttemptStatus::Processing);
+        $this->dueInstallment($creditA, 2, InstallmentStatus::Pending, '2026-10-07', InstallmentPaymentAttemptStatus::Rejected);
+        $this->dueInstallment($creditA, 3, InstallmentStatus::Pending, '2026-10-08');
+        $this->em->flush();
+        $this->em->clear();
+
+        $installments = $this->creditRequestRepository->searchInstallments(
+            new InstallmentSearchCriteria(paymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing),
+        );
+
+        self::assertSame([$processingA, $processingB], array_map(static fn (Installment $installment): string => $installment->getId(), $installments));
+        self::assertSame(InstallmentPaymentAttemptStatus::Processing, $installments[0]->getLastPaymentAttemptStatus());
+    }
+
+    public function testExcludingAPaymentAttemptStatusKeepsInstallmentsWithoutAttempt(): void
+    {
+        $company  = $this->company('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', '20123456789');
+        $credit   = $this->creditRequest('10000000-0000-4000-8000-000000000000', $company, CreditRequestStatus::Active);
+        $noAttempt = $this->dueInstallment($credit, 1, InstallmentStatus::Pending, '2026-10-05');
+        $rejected  = $this->dueInstallment($credit, 2, InstallmentStatus::Pending, '2026-10-06', InstallmentPaymentAttemptStatus::Rejected);
+        $this->dueInstallment($credit, 3, InstallmentStatus::Pending, '2026-10-07', InstallmentPaymentAttemptStatus::Processing);
+        $this->em->flush();
+        $this->em->clear();
+
+        $installments = $this->creditRequestRepository->searchInstallments(
+            new InstallmentSearchCriteria(excludedPaymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing),
+        );
+
+        self::assertSame([$noAttempt, $rejected], array_map(static fn (Installment $installment): string => $installment->getId(), $installments));
+    }
+
+    public function testEmptyCriteriaReturnsEveryInstallmentOrderedByDueDate(): void
+    {
+        $company = $this->company('aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa', '20123456789');
+        $credit  = $this->creditRequest('10000000-0000-4000-8000-000000000000', $company, CreditRequestStatus::Proposal);
+        $later   = $this->dueInstallment($credit, 1, InstallmentStatus::Paid, '2026-10-06');
+        $earlier = $this->dueInstallment($credit, 2, InstallmentStatus::Overdue, '2026-10-05');
+        $this->em->flush();
+        $this->em->clear();
+
+        $installments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria());
+
+        self::assertSame([$earlier, $later], array_map(static fn (Installment $installment): string => $installment->getId(), $installments));
     }
 
     private function company(string $id, string $cuit): Company
@@ -160,8 +219,13 @@ final class DoctrineCreditRequestRepositoryTest extends KernelTestCase
     /**
      * @return string the installment id
      */
-    private function dueInstallment(CreditRequest $creditRequest, int $periodNumber, InstallmentStatus $status, string $dueDate): string
-    {
+    private function dueInstallment(
+        CreditRequest $creditRequest,
+        int $periodNumber,
+        InstallmentStatus $status,
+        string $dueDate,
+        ?InstallmentPaymentAttemptStatus $paymentAttemptStatus = null,
+    ): string {
         $installment = new Installment(
             substr($creditRequest->getId(), 0, -12) . sprintf('%012d', 100 + $periodNumber),
             $periodNumber,
@@ -173,6 +237,12 @@ final class DoctrineCreditRequestRepositoryTest extends KernelTestCase
             $creditRequest,
         );
         $installment->changeDueDate(new \DateTimeImmutable($dueDate));
+        if ($paymentAttemptStatus !== null) {
+            $installment->startPaymentAttempt(new \DateTimeImmutable());
+        }
+        if ($paymentAttemptStatus === InstallmentPaymentAttemptStatus::Rejected) {
+            $installment->rejectPaymentAttempt(new \DateTimeImmutable());
+        }
         $this->em->persist($installment);
 
         return $installment->getId();

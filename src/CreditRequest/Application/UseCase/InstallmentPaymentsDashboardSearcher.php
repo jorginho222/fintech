@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\CreditRequest\Application\UseCase;
 
 use App\CreditRequest\Application\DTO\InstallmentPaymentsDashboardDto;
+use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
+use App\CreditRequest\Domain\Model\InstallmentPaymentAttemptStatus;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
+use App\CreditRequest\Domain\Repository\InstallmentSearchCriteria;
 use App\Shared\Domain\Service\AuthenticatedCompanyIdProviderInterface;
 
 final class InstallmentPaymentsDashboardSearcher
@@ -24,14 +27,33 @@ final class InstallmentPaymentsDashboardSearcher
         $monthEnd   = $monthStart->modify('first day of next month');
 
         // Split by status, so an installment due earlier this month that is now overdue is only listed as overdue.
-        $monthPayments   = $this->creditRequestRepository->findActiveCreditInstallments($companyId, InstallmentStatus::Pending, $monthStart, $monthEnd);
-        $overduePayments = $this->creditRequestRepository->findActiveCreditInstallments($companyId, InstallmentStatus::Overdue);
+        $monthPayments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria(
+            companyId: $companyId,
+            creditRequestStatus: CreditRequestStatus::Active,
+            status: InstallmentStatus::Pending,
+            excludedPaymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+            dueFrom: $monthStart,
+            dueBefore: $monthEnd,
+        ));
+        $overduePayments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria(
+            companyId: $companyId,
+            creditRequestStatus: CreditRequestStatus::Active,
+            status: InstallmentStatus::Overdue,
+            excludedPaymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+        ));
+        $processingPayments = $this->creditRequestRepository->searchInstallments(new InstallmentSearchCriteria(
+            companyId: $companyId,
+            creditRequestStatus: CreditRequestStatus::Active,
+            paymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+        ));
 
         return new InstallmentPaymentsDashboardDto(
             monthPayments: $monthPayments,
             monthTotalAmount: $this->sumTotalAmounts($monthPayments),
             overduePayments: $overduePayments,
             overdueTotalAmount: $this->sumTotalAmounts($overduePayments),
+            processingPayments: $processingPayments,
+            processingTotalAmount: $this->sumTotalAmounts($processingPayments),
         );
     }
 

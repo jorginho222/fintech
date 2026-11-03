@@ -38,6 +38,21 @@ final class CreditRequestApplicationCreatePostControllerTest extends WebTestCase
         self::assertSame(12, $body['installmentQuantity']);
     }
 
+    public function testApplyDoesNotQueueAnEmailBeforeTheRequestIsSent(): void
+    {
+        $client = static::createClient();
+        [, $token] = $this->registerAndLogin($client);
+
+        $client->jsonRequest('POST', self::APPLY_URL, [
+            'reference'           => 'Ampliación planta',
+            'amount'              => 10_000_000,
+            'installmentQuantity' => 12,
+        ], self::bearer($token));
+
+        self::assertResponseStatusCodeSame(201);
+        self::assertQueuedEmailCount(0);
+    }
+
     public function testApplyReturns409WhenCompanyAlreadyUsedTheReference(): void
     {
         $client = static::createClient();

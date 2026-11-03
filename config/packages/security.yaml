@@ -25,6 +25,13 @@ security:
             custom_authenticators:
                 - App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator
 
+        # The payment service authenticates with its own shared secret, not with a company token.
+        installment_payment_gateway_webhook:
+            pattern: ^%app.api_prefix%/installment-payment-update$
+            stateless: true
+            custom_authenticators:
+                - App\CreditRequest\Infrastructure\Security\InstallmentPaymentGatewayWebhookAuthenticator
+
         api:
             pattern: ^%app.api_prefix%
             stateless: true
@@ -35,6 +42,7 @@ security:
     access_control:
         - { path: '^%app.api_prefix%/company_registration$', methods: [POST], roles: PUBLIC_ACCESS }
         - { path: '^%app.api_prefix%/credit-request-application-update$', methods: [PUT], roles: ROLE_CREDIT_BUREAU_WEBHOOK }
+        - { path: '^%app.api_prefix%/installment-payment-update$', methods: [PUT], roles: ROLE_INSTALLMENT_PAYMENT_GATEWAY_WEBHOOK }
         # Member management is the admin's alone, whatever permissions a member holds.
         - { path: '^%app.api_prefix%/user(/|$)', roles: ROLE_COMPANY_ADMIN }
         - { path: '^%app.api_prefix%', roles: ROLE_COMPANY }

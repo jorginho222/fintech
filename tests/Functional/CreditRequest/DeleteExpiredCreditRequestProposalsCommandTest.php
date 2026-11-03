@@ -7,6 +7,8 @@ namespace App\Tests\Functional\CreditRequest;
 use App\Company\Domain\Model\Company;
 use App\Company\Domain\Model\TaxStatus;
 use App\CreditRequest\Domain\Model\CreditRequest;
+use App\CreditRequest\Domain\Model\CreditRequestApplication;
+use App\CreditRequest\Domain\Model\CreditRequestApplicationStatus;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
@@ -73,6 +75,65 @@ final class DeleteExpiredCreditRequestProposalsCommandTest extends KernelTestCas
 
         self::assertNull($em->find(CreditRequest::class, $expiredCreditRequest->getId()));
         self::assertNull($em->find(Installment::class, $installment->getId()));
+    }
+
+    public function testKeepsTheApplicationOfADeletedProposal(): void
+    {
+        self::bootKernel();
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+
+        $company = new Company(
+            'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa',
+            'Empresa SRL',
+            '20123456780',
+            'empresa@example.com',
+            TaxStatus::Monotributo,
+        );
+        $em->persist($company);
+
+        $expiredCreditRequest = new CreditRequest(
+            'bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb',
+            'Crédito 3',
+            '10000000',
+            '60.00',
+            12,
+            $company,
+            CreditRequestStatus::ProposalExpired,
+        );
+        $em->persist($expiredCreditRequest);
+
+        $creditRequestApplication = new CreditRequestApplication(
+            'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            'Crédito 3',
+            '10000000',
+            12,
+            $company,
+        );
+        $creditRequestApplication->approve();
+        $creditRequestApplication->setCreditRequest($expiredCreditRequest);
+        $em->persist($creditRequestApplication);
+        $em->flush();
+
+        $em->getConnection()->executeStatement(
+            "UPDATE credit_requests SET approval_limit_date = NOW() - INTERVAL '16 days' WHERE id = :id",
+            ['id' => $expiredCreditRequest->getId()],
+        );
+        $em->clear();
+
+        $application = new Application(self::$kernel);
+        $commandTester = new CommandTester($application->find('app:credit-request:delete-expired-proposals'));
+        $commandTester->execute([]);
+
+        $commandTester->assertCommandIsSuccessful();
+        self::assertStringContainsString('Deleted 1 expired credit request proposal', $commandTester->getDisplay());
+
+        $em->clear();
+        self::assertNull($em->find(CreditRequest::class, $expiredCreditRequest->getId()));
+
+        $keptApplication = $em->find(CreditRequestApplication::class, $creditRequestApplication->getId());
+        self::assertNotNull($keptApplication);
+        self::assertSame(CreditRequestApplicationStatus::Approved, $keptApplication->getStatus());
+        self::assertNull($keptApplication->getCreditRequest());
     }
 
     public function testKeepsExpiredProposalsWithinTheirRetentionPeriod(): void

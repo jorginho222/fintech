@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\CreditRequest\Domain\Model;
 
 use App\CreditRequest\Domain\Exception\InstallmentAlreadyPaidException;
+use App\CreditRequest\Domain\Exception\InstallmentPaymentInProcessException;
 
 class Installment
 {
@@ -12,6 +13,9 @@ class Installment
     private ?\DateTimeImmutable $lastPenaltyCalculationAt;
     private string $penaltyInterestAmount;
     private string $penaltyIva21Tax;
+    private ?InstallmentPaymentAttemptStatus $lastPaymentAttemptStatus;
+    private ?\DateTimeImmutable $lastPaymentAttemptAt;
+    private ?string $lastPaymentAttemptErrorMessage;
 
     public function __construct(
         private string            $id,
@@ -28,6 +32,9 @@ class Installment
         $this->lastPenaltyCalculationAt = null;
         $this->penaltyInterestAmount = '0.0000';
         $this->penaltyIva21Tax = '0.0000';
+        $this->lastPaymentAttemptStatus = null;
+        $this->lastPaymentAttemptAt = null;
+        $this->lastPaymentAttemptErrorMessage = null;
     }
 
     public function getId(): string
@@ -85,6 +92,21 @@ class Installment
         return $this->status;
     }
 
+    public function getLastPaymentAttemptStatus(): ?InstallmentPaymentAttemptStatus
+    {
+        return $this->lastPaymentAttemptStatus;
+    }
+
+    public function getLastPaymentAttemptAt(): ?\DateTimeImmutable
+    {
+        return $this->lastPaymentAttemptAt;
+    }
+
+    public function getLastPaymentAttemptErrorMessage(): ?string
+    {
+        return $this->lastPaymentAttemptErrorMessage;
+    }
+
     public function getCreditRequest(): CreditRequest
     {
         return $this->creditRequest;
@@ -104,9 +126,70 @@ class Installment
         $this->status = InstallmentStatus::Paid;
     }
 
+    public function startPaymentAttempt(\DateTimeImmutable $now): void
+    {
+        if ($this->status === InstallmentStatus::Paid) {
+            throw new InstallmentAlreadyPaidException();
+        }
+
+        if ($this->isPaymentProcessing()) {
+            throw new InstallmentPaymentInProcessException();
+        }
+
+        $this->recordPaymentAttempt(InstallmentPaymentAttemptStatus::Processing, $now);
+    }
+
+    public function approvePaymentAttempt(\DateTimeImmutable $now): bool
+    {
+        if (!$this->canReceivePaymentResult()) {
+            return false;
+        }
+
+        $this->pay();
+        $this->recordPaymentAttempt(InstallmentPaymentAttemptStatus::Approved, $now);
+
+        return true;
+    }
+
+    public function rejectPaymentAttempt(\DateTimeImmutable $now): bool
+    {
+        if (!$this->canReceivePaymentResult()) {
+            return false;
+        }
+
+        $this->recordPaymentAttempt(InstallmentPaymentAttemptStatus::Rejected, $now);
+
+        return true;
+    }
+
+    public function failPaymentAttempt(\DateTimeImmutable $now, string $errorMessage): bool
+    {
+        if (!$this->canReceivePaymentResult()) {
+            return false;
+        }
+
+        $this->recordPaymentAttempt(InstallmentPaymentAttemptStatus::ProcessingFailed, $now, $errorMessage);
+
+        return true;
+    }
+
+    public function timeoutPaymentAttempt(\DateTimeImmutable $now): void
+    {
+        if (!$this->isPaymentProcessing()) {
+            return;
+        }
+
+        $this->recordPaymentAttempt(InstallmentPaymentAttemptStatus::ProcessingTimeout, $now);
+    }
+
+    public function isPaymentProcessing(): bool
+    {
+        return $this->lastPaymentAttemptStatus === InstallmentPaymentAttemptStatus::Processing;
+    }
+
     public function markOverdue(): void
     {
-        if ($this->status !== InstallmentStatus::Pending) {
+        if ($this->status !== InstallmentStatus::Pending || $this->isPaymentProcessing()) {
             return;
         }
 
@@ -136,5 +219,25 @@ class Installment
     public function setLastPenaltyCalculationAt(\DateTimeImmutable $lastPenaltyCalculationAt): void
     {
         $this->lastPenaltyCalculationAt = $lastPenaltyCalculationAt;
+    }
+
+    /**
+     * A result that arrives after the timeout still counts: the service may have processed the payment late.
+     * A paid installment has an approved attempt and a never attempted one has none, so both are left out.
+     */
+    private function canReceivePaymentResult(): bool
+    {
+        return $this->isPaymentProcessing()
+            || $this->lastPaymentAttemptStatus === InstallmentPaymentAttemptStatus::ProcessingTimeout;
+    }
+
+    private function recordPaymentAttempt(
+        InstallmentPaymentAttemptStatus $status,
+        \DateTimeImmutable $at,
+        ?string $errorMessage = null,
+    ): void {
+        $this->lastPaymentAttemptStatus = $status;
+        $this->lastPaymentAttemptAt = $at;
+        $this->lastPaymentAttemptErrorMessage = $errorMessage;
     }
 }

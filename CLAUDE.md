@@ -11,7 +11,7 @@ Fintech API built with **Symfony 7.3** following **Domain-Driven Design (DDD)** 
 All commands run inside Docker via Make targets. The PHP container is named `php`.
 
 ```bash
-make up          # Start all containers (php, nginx:8080, postgres:5432, adminer:8081)
+make up          # Start all containers (php, nginx:8080, postgres:5432, adminer:8081, mailpit:8025)
 make down        # Stop containers
 make build       # Rebuild images from scratch (--no-cache)
 make bash        # Shell into the php container

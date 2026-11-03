@@ -72,6 +72,11 @@ class CreditRequestApplication
         return $this->createdAt;
     }
 
+    public function isEvaluationPending(): bool
+    {
+        return $this->status === CreditRequestApplicationStatus::EvaluationPending;
+    }
+
     public function approve(): void
     {
         $this->status = CreditRequestApplicationStatus::Approved;

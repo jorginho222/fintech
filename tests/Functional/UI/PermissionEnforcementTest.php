@@ -25,7 +25,7 @@ final class PermissionEnforcementTest extends WebTestCase
         self::assertResponseStatusCodeSame(403);
         self::assertSame(['error' => 'No tiene permiso para acceder a este recurso.'], json_decode($client->getResponse()->getContent(), true));
 
-        $client->jsonRequest('PUT', '/api/v1/installment/eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee/pay', [], self::bearer($memberToken));
+        $client->jsonRequest('PUT', '/api/v1/installment/eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee/pay-request', [], self::bearer($memberToken));
         self::assertResponseStatusCodeSame(403);
     }
 

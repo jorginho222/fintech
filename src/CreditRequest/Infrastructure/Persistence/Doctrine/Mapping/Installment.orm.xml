@@ -26,6 +26,9 @@
         <field name="dueDate" column="due_date" type="date_immutable" nullable="true"/>
         <field name="lastPenaltyCalculationAt" column="last_penalty_calculation_at" type="datetime_immutable" nullable="true"/>
         <field name="status" column="status" type="string" enum-type="App\CreditRequest\Domain\Model\InstallmentStatus" nullable="false"/>
+        <field name="lastPaymentAttemptStatus" column="last_payment_attempt_status" type="string" enum-type="App\CreditRequest\Domain\Model\InstallmentPaymentAttemptStatus" nullable="true"/>
+        <field name="lastPaymentAttemptAt" column="last_payment_attempt_at" type="datetime_immutable" nullable="true"/>
+        <field name="lastPaymentAttemptErrorMessage" column="last_payment_attempt_error_message" type="text" nullable="true"/>
 
         <many-to-one field="creditRequest" target-entity="App\CreditRequest\Domain\Model\CreditRequest" inversed-by="installmentCollection">
             <join-column name="credit_request_id" referenced-column-name="id" nullable="false"/>

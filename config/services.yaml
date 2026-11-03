@@ -3,6 +3,8 @@ parameters:
     app.mailer.from_address: '%env(MAILER_FROM_ADDRESS)%'
     app.credit_bureau_simulation.webhook_url: '%env(CREDIT_BUREAU_SIMULATION_WEBHOOK_URL)%'
     app.credit_bureau_simulation.webhook_secret: '%env(CREDIT_BUREAU_WEBHOOK_SECRET)%'
+    app.payment_gateway_simulation.webhook_url: '%env(PAYMENT_GATEWAY_SIMULATION_WEBHOOK_URL)%'
+    app.payment_gateway_simulation.webhook_secret: '%env(PAYMENT_GATEWAY_WEBHOOK_SECRET)%'
     app.api_version: 'v1'
     app.api_prefix: '/api/%app.api_version%'
     app.jwt_refresh_token_ttl: '%env(int:JWT_REFRESH_TOKEN_TTL)%'
@@ -49,6 +51,31 @@ services:
     App\CreditRequest\Infrastructure\Security\CreditBureauWebhookAuthenticator:
         arguments:
             $webhookSecret: '%app.credit_bureau_simulation.webhook_secret%'
+
+    App\CreditRequest\Domain\Service\InstallmentPaymentWebhookClientInterface:
+        alias: App\CreditRequest\Infrastructure\Service\InstallmentPaymentWebhookClient
+
+    App\CreditRequest\Infrastructure\Service\InstallmentPaymentWebhookClient:
+        arguments:
+            $webhookUrl: '%app.payment_gateway_simulation.webhook_url%'
+
+    App\CreditRequest\Infrastructure\Security\InstallmentPaymentGatewayWebhookAuthenticator:
+        arguments:
+            $webhookSecret: '%app.payment_gateway_simulation.webhook_secret%'
+
+    App\CreditRequest\Domain\Service\CreditRequestApplicationNotifierInterface:
+        alias: App\CreditRequest\Infrastructure\Service\CreditRequestApplicationMailer
+
+    App\CreditRequest\Infrastructure\Service\CreditRequestApplicationMailer:
+        arguments:
+            $fromAddress: '%app.mailer.from_address%'
+
+    App\CreditRequest\Domain\Service\InstallmentPaymentNotifierInterface:
+        alias: App\CreditRequest\Infrastructure\Service\InstallmentPaymentMailer
+
+    App\CreditRequest\Infrastructure\Service\InstallmentPaymentMailer:
+        arguments:
+            $fromAddress: '%app.mailer.from_address%'
 
     App\Company\Domain\Service\PasswordHasherInterface:
         alias: App\Company\Infrastructure\Security\SymfonyPasswordHasher

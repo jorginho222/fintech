@@ -25,7 +25,7 @@ final class CreditRequestPaidCheckerTest extends TestCase
         $creditRequestRepository = $this->createMock(CreditRequestRepositoryInterface::class);
         $creditRequestRepository->expects(self::once())->method('save')->with($creditRequest);
 
-        (new CreditRequestPaidChecker($creditRequestRepository))->execute($creditRequest);
+        self::assertTrue((new CreditRequestPaidChecker($creditRequestRepository))->execute($creditRequest));
 
         self::assertSame(CreditRequestStatus::Paid, $creditRequest->getStatus());
     }
@@ -39,7 +39,7 @@ final class CreditRequestPaidCheckerTest extends TestCase
         $creditRequestRepository = $this->createMock(CreditRequestRepositoryInterface::class);
         $creditRequestRepository->expects(self::never())->method('save');
 
-        (new CreditRequestPaidChecker($creditRequestRepository))->execute($creditRequest);
+        self::assertFalse((new CreditRequestPaidChecker($creditRequestRepository))->execute($creditRequest));
 
         self::assertSame(CreditRequestStatus::Active, $creditRequest->getStatus());
     }

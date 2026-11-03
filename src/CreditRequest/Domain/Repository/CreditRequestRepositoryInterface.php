@@ -7,7 +7,6 @@ namespace App\CreditRequest\Domain\Repository;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
-use App\CreditRequest\Domain\Model\InstallmentStatus;
 
 interface CreditRequestRepositoryInterface
 {
@@ -37,17 +36,11 @@ interface CreditRequestRepositoryInterface
     public function countInstallmentsByStatus(string $companyId, CreditRequestStatus $creditRequestStatus): array;
 
     /**
-     * Installments of the company's active credit requests in the given status, ordered by due date.
-     * $dueFrom is inclusive and $dueBefore exclusive; a null bound is not applied.
+     * Installments matching the criteria, ordered by due date and period number.
      *
      * @return Installment[]
      */
-    public function findActiveCreditInstallments(
-        string $companyId,
-        InstallmentStatus $status,
-        ?\DateTimeImmutable $dueFrom = null,
-        ?\DateTimeImmutable $dueBefore = null,
-    ): array;
+    public function searchInstallments(InstallmentSearchCriteria $criteria): array;
 
     /**
      * @return CreditRequest[]
@@ -58,11 +51,6 @@ interface CreditRequestRepositoryInterface
      * @return CreditRequest[]
      */
     public function findExpiredProposalsForDeletion(\DateTimeImmutable $before): array;
-
-    /**
-     * @return Installment[]
-     */
-    public function findWithOverdueInstallments(\DateTimeImmutable $now): array;
 
     /**
      * When $includeOverdueBeforePeriodStart is true, overdue installments are always included

@@ -9,6 +9,7 @@ use App\Company\Domain\Model\TaxStatus;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Infrastructure\Service\CreditRequestProposalExpirationMailer;
+use App\Shared\Application\UseCase\EmailSender;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -47,16 +48,17 @@ final class CreditRequestProposalExpirationMailerTest extends TestCase
                     static fn ($address) => $address->getAddress(),
                     $email->getFrom(),
                 ));
-                self::assertSame('Your credit request proposal has expired', $email->getSubject());
+                self::assertSame('Su propuesta de crédito "Crédito 1" venció', $email->getSubject());
                 self::assertStringContainsString('Empresa SRL', (string) $email->getTextBody());
+                self::assertStringContainsString('"Crédito 1"', (string) $email->getTextBody());
                 self::assertStringContainsString(
-                    $creditRequest->getApprovalLimitDate()->format('Y-m-d H:i'),
+                    $creditRequest->getApprovalLimitDate()->format('d/m/Y H:i') . ' (hora UTC)',
                     (string) $email->getTextBody(),
                 );
 
                 return true;
             }));
 
-        (new CreditRequestProposalExpirationMailer($mailer, 'no-reply@fintech.local'))->notify($creditRequest);
+        (new CreditRequestProposalExpirationMailer(new EmailSender($mailer), 'no-reply@fintech.local'))->notify($creditRequest);
     }
 }

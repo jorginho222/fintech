@@ -58,6 +58,45 @@ final class InstallmentPenaltyInterestUpdaterTest extends TestCase
         self::assertSame('431.51', $installment->getPenaltyIva21Tax());
     }
 
+    public function testChargesEveryDaySinceTheLastCalculationLikeRunningOncePerDay(): void
+    {
+        $dailyRuns = $this->createInstallment();
+        foreach (['2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'] as $day) {
+            $this->updater->execute($dailyRuns, new \DateTimeImmutable($day));
+        }
+
+        $missedRuns = $this->createInstallment();
+        $this->updater->execute($missedRuns, new \DateTimeImmutable('2026-07-14'));
+        $accrued = $this->updater->execute($missedRuns, new \DateTimeImmutable('2026-07-17'));
+
+        self::assertTrue($accrued);
+        self::assertSame($dailyRuns->getPenaltyInterestAmount(), $missedRuns->getPenaltyInterestAmount());
+        self::assertSame($dailyRuns->getPenaltyIva21Tax(), $missedRuns->getPenaltyIva21Tax());
+        self::assertSame($dailyRuns->getTotalAmount(), $missedRuns->getTotalAmount());
+        self::assertEquals(new \DateTimeImmutable('2026-07-17'), $missedRuns->getLastPenaltyCalculationAt());
+    }
+
+    public function testCountsFromTheDueDateWhenNeverCalculated(): void
+    {
+        $installment = $this->createInstallment();
+        $installment->changeDueDate(new \DateTimeImmutable('2026-07-11'));
+
+        $this->updater->execute($installment, new \DateTimeImmutable('2026-07-14 03:00:00'));
+
+        // Three days of the 2054.79 charged per day.
+        self::assertSame('6164.37', $installment->getPenaltyInterestAmount());
+    }
+
+    public function testChargesNothingBeforeTheDueDateHasPassed(): void
+    {
+        $installment = $this->createInstallment();
+        $installment->changeDueDate(new \DateTimeImmutable('2026-07-14'));
+
+        self::assertFalse($this->updater->execute($installment, new \DateTimeImmutable('2026-07-14 03:00:00')));
+        self::assertFalse($this->updater->execute($installment, new \DateTimeImmutable('2026-07-13')));
+        self::assertSame('0.0000', $installment->getPenaltyInterestAmount());
+    }
+
     private function createInstallment(): Installment
     {
         $company = new Company(
