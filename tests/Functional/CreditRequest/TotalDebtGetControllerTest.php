@@ -213,6 +213,32 @@ final class TotalDebtGetControllerTest extends WebTestCase
         self::assertArrayHasKey('month', $response['errors']);
     }
 
+    public function testStillCountsInstallmentsWithAProcessingPayment(): void
+    {
+        $client = static::createClient();
+        [$companyPayload, $token] = $this->registerAndLogin($client);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $today = new \DateTimeImmutable('today');
+
+        $creditRequest = new CreditRequest('aaaaaaaa-0000-4000-8000-000000000001', 'Crédito 1', '100000', '55', 2, $em->find(Company::class, $companyPayload['id']), CreditRequestStatus::Active);
+        $em->persist($creditRequest);
+
+        $processing = $this->createInstallment('aaaaaaaa-0000-4000-8000-000000000002', 1, InstallmentStatus::Pending, $creditRequest, $today->modify('+1 month'), '1000.00');
+        $processing->startPaymentAttempt(new \DateTimeImmutable());
+        $em->persist($processing);
+        $em->flush();
+
+        $limitDate = $today->modify('+2 months');
+        $client->jsonRequest('GET', self::URL . '?' . http_build_query([
+            'month' => (int) $limitDate->format('n'),
+            'year'  => (int) $limitDate->format('Y'),
+        ]), [], self::bearer($token));
+
+        self::assertResponseIsSuccessful();
+        self::assertSame('1000.00', json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR)['totalAmount']);
+    }
+
     private function createInstallment(
         string $id,
         int $periodNumber,

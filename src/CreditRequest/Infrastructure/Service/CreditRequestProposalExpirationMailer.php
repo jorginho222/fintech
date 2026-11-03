@@ -6,13 +6,12 @@ namespace App\CreditRequest\Infrastructure\Service;
 
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Service\CreditRequestProposalExpirationNotifierInterface;
-use Symfony\Component\Mailer\MailerInterface;
-use Symfony\Component\Mime\Email;
+use App\Shared\Application\UseCase\EmailSender;
 
 final class CreditRequestProposalExpirationMailer implements CreditRequestProposalExpirationNotifierInterface
 {
     public function __construct(
-        private readonly MailerInterface $mailer,
+        private readonly EmailSender $emailSender,
         private readonly string $fromAddress,
     ) {
     }
@@ -21,16 +20,16 @@ final class CreditRequestProposalExpirationMailer implements CreditRequestPropos
     {
         $company = $creditRequest->getCompany();
 
-        $email = (new Email())
-            ->from($this->fromAddress)
-            ->to($company->getEmail())
-            ->subject('Your credit request proposal has expired')
-            ->text(sprintf(
-                "Hello %s,\n\nYour credit request proposal has expired because it was not approved before %s.\n\nRegards,\nFintech",
+        $this->emailSender->execute(
+            $this->fromAddress,
+            $company->getEmail(),
+            sprintf('Su propuesta de crédito "%s" venció', $creditRequest->getReference()),
+            sprintf(
+                "Hola %s,\n\nSu propuesta de crédito \"%s\" venció porque no fue confirmada antes del %s (hora UTC).\n\nSaludos,\nFintech",
                 $company->getSocialReason(),
-                $creditRequest->getApprovalLimitDate()->format('Y-m-d H:i'),
-            ));
-
-        $this->mailer->send($email);
+                $creditRequest->getReference(),
+                $creditRequest->getApprovalLimitDate()->format('d/m/Y H:i'),
+            ),
+        );
     }
 }

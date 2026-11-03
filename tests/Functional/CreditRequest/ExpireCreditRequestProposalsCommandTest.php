@@ -62,9 +62,10 @@ final class ExpireCreditRequestProposalsCommandTest extends KernelTestCase
         $refreshedCreditRequest = $em->find(CreditRequest::class, $expiredCreditRequest->getId());
         self::assertSame(CreditRequestStatus::ProposalExpired, $refreshedCreditRequest->getStatus());
 
-        self::assertEmailCount(1);
+        self::assertQueuedEmailCount(1);
         $email = self::getMailerMessage();
         self::assertEmailAddressContains($email, 'To', 'empresa@example.com');
         self::assertEmailTextBodyContains($email, 'Empresa SRL');
+        self::assertEmailTextBodyContains($email, $expiredCreditRequest->getReference());
     }
 }

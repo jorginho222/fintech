@@ -90,6 +90,8 @@ final class CreditRequestSerializer
             'totalAmount' => $installment->getTotalAmount(),
             'dueDate' => $installment->getDueDate()?->format(\DateTimeInterface::ATOM),
             'status' => $installment->getStatus()->value,
+            'lastPaymentAttemptStatus' => $installment->getLastPaymentAttemptStatus()?->value,
+            'lastPaymentAttemptAt' => $installment->getLastPaymentAttemptAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
 }

@@ -12,6 +12,7 @@ services:
     depends_on:
       - postgres
       - rabbitmq
+      - mailpit
 
   worker:
     build:
@@ -28,6 +29,14 @@ services:
         condition: service_started
       rabbitmq:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  mailpit:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine

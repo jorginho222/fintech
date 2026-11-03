@@ -47,6 +47,41 @@ final class InstallmentPaymentsDashboardGetControllerTest extends WebTestCase
         self::assertSame('500.00', $payments['overduePayments']['totalAmount']);
     }
 
+    public function testListsProcessingPaymentsOnlyInTheirOwnListAndTotal(): void
+    {
+        $client = static::createClient();
+        [$company, $token] = $this->registerAndLogin($client);
+        $monthStart = new \DateTimeImmutable('first day of this month midnight');
+
+        $active = $this->creditRequest('10000000-0000-4000-8000-000000000000', $company['id'], CreditRequestStatus::Active);
+        $processingOverdue = $this->installment($active, 1, InstallmentStatus::Overdue, $monthStart->modify('-1 month'), '200.00');
+        $processingOverdue->startPaymentAttempt(new \DateTimeImmutable());
+        $processingThisMonth = $this->installment($active, 2, InstallmentStatus::Pending, $monthStart, '300.00');
+        $processingThisMonth->startPaymentAttempt(new \DateTimeImmutable());
+        $processingNextMonth = $this->installment($active, 3, InstallmentStatus::Pending, $monthStart->modify('first day of next month'), '400.00');
+        $processingNextMonth->startPaymentAttempt(new \DateTimeImmutable());
+        $rejected = $this->installment($active, 4, InstallmentStatus::Pending, $monthStart, '1000.00');
+        $rejected->startPaymentAttempt(new \DateTimeImmutable());
+        $rejected->rejectPaymentAttempt(new \DateTimeImmutable());
+        $overdue = $this->installment($active, 5, InstallmentStatus::Overdue, $monthStart->modify('-1 month'), '2000.00');
+        $this->flush();
+
+        $payments = $this->requestPayments($client, $token);
+
+        self::assertSame([$rejected->getId()], $this->ids($payments['monthPayments']));
+        self::assertSame('1000.00', $payments['monthPayments']['totalAmount']);
+        self::assertSame([$overdue->getId()], $this->ids($payments['overduePayments']));
+        self::assertSame('2000.00', $payments['overduePayments']['totalAmount']);
+        self::assertSame([$processingOverdue->getId(), $processingThisMonth->getId(), $processingNextMonth->getId()], $this->ids($payments['processingPayments']));
+        self::assertSame('900.00', $payments['processingPayments']['totalAmount']);
+
+        self::assertSame('rejected', $payments['monthPayments']['installments'][0]['lastPaymentAttemptStatus']);
+        self::assertNotNull($payments['monthPayments']['installments'][0]['lastPaymentAttemptAt']);
+        self::assertNull($payments['overduePayments']['installments'][0]['lastPaymentAttemptStatus']);
+        self::assertNull($payments['overduePayments']['installments'][0]['lastPaymentAttemptAt']);
+        self::assertSame('processing', $payments['processingPayments']['installments'][0]['lastPaymentAttemptStatus']);
+    }
+
     public function testEachPaymentHasWhatTheDashboardShows(): void
     {
         $client = static::createClient();
@@ -73,8 +108,9 @@ final class InstallmentPaymentsDashboardGetControllerTest extends WebTestCase
         [, $token] = $this->registerAndLogin($client);
 
         self::assertSame([
-            'monthPayments'   => ['totalAmount' => '0.00', 'installments' => []],
-            'overduePayments' => ['totalAmount' => '0.00', 'installments' => []],
+            'monthPayments'      => ['totalAmount' => '0.00', 'installments' => []],
+            'overduePayments'    => ['totalAmount' => '0.00', 'installments' => []],
+            'processingPayments' => ['totalAmount' => '0.00', 'installments' => []],
         ], $this->requestPayments($client, $token));
     }
 

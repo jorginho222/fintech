@@ -98,6 +98,37 @@ final class InstallmentPendingToPaySearchGetControllerTest extends WebTestCase
         self::assertSame('1787666.66', $response['totalAmount']);
     }
 
+    public function testLeavesProcessingPaymentsOutOfTheListAndTotal(): void
+    {
+        $client = static::createClient();
+        [$companyPayload, $token] = $this->registerAndLogin($client);
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $creditRequest = new CreditRequest('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Crédito 1', '100000', '55', 3, $em->find(Company::class, $companyPayload['id']), CreditRequestStatus::Active);
+        $em->persist($creditRequest);
+
+        $processing = $this->createInstallment('11111111-1111-4111-8111-111111111111', 1, InstallmentStatus::Pending, $creditRequest, new \DateTimeImmutable('2026-06-10'));
+        $processing->startPaymentAttempt(new \DateTimeImmutable());
+        $rejected = $this->createInstallment('22222222-2222-4222-8222-222222222222', 2, InstallmentStatus::Pending, $creditRequest, new \DateTimeImmutable('2026-06-15'));
+        $rejected->startPaymentAttempt(new \DateTimeImmutable());
+        $rejected->rejectPaymentAttempt(new \DateTimeImmutable());
+        $em->persist($processing);
+        $em->persist($rejected);
+        $em->flush();
+
+        $client->jsonRequest('GET', self::SEARCH_URL . '?year=2026&month=6', [], self::bearer($token));
+
+        self::assertResponseIsSuccessful();
+        $response = json_decode($client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+
+        // Index 0 even though the first installment found was filtered out: it has to stay a JSON list.
+        self::assertSame($rejected->getId(), $response['installments'][0]['id']);
+        self::assertCount(1, $response['installments']);
+        self::assertSame('893833.33', $response['totalAmount']);
+        self::assertSame('rejected', $response['installments'][0]['lastPaymentAttemptStatus']);
+        self::assertNotNull($response['installments'][0]['lastPaymentAttemptAt']);
+    }
+
     private function createInstallment(
         string $id,
         int $periodNumber,

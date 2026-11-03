@@ -7,6 +7,9 @@ framework:
         routing:
             App\CreditRequest\Application\Message\SimulateCreditRequestApplicationMessage: async
             App\CreditRequest\Application\Message\HandleCreditRequestApplicationResultMessage: async
+            App\CreditRequest\Application\Message\RequestInstallmentPaymentMessage: async
+            App\CreditRequest\Application\Message\HandleInstallmentPaymentResultMessage: async
+            Symfony\Component\Mailer\Messenger\SendEmailMessage: async
 
 when@test:
     framework:

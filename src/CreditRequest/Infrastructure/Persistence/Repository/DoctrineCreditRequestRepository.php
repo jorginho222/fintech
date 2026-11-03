@@ -9,6 +9,7 @@ use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
+use App\CreditRequest\Domain\Repository\InstallmentSearchCriteria;
 use Doctrine\ORM\EntityManagerInterface;
 
 class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterface
@@ -91,30 +92,37 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
         return $counts;
     }
 
-    public function findActiveCreditInstallments(
-        string $companyId,
-        InstallmentStatus $status,
-        ?\DateTimeImmutable $dueFrom = null,
-        ?\DateTimeImmutable $dueBefore = null,
-    ): array {
+    public function searchInstallments(InstallmentSearchCriteria $criteria): array
+    {
         $queryBuilder = $this->em->createQueryBuilder()
             ->select('installment', 'creditRequest')
             ->from(Installment::class, 'installment')
             ->join('installment.creditRequest', 'creditRequest')
-            ->where('IDENTITY(creditRequest.company) = :companyId')
-            ->andWhere('creditRequest.status = :creditRequestStatus')
-            ->andWhere('installment.status = :status')
-            ->setParameter('companyId', $companyId)
-            ->setParameter('creditRequestStatus', CreditRequestStatus::Active)
-            ->setParameter('status', $status)
             ->orderBy('installment.dueDate', 'ASC')
             ->addOrderBy('installment.periodNumber', 'ASC');
 
-        if ($dueFrom !== null) {
-            $queryBuilder->andWhere('installment.dueDate >= :dueFrom')->setParameter('dueFrom', $dueFrom);
+        if ($criteria->companyId !== null) {
+            $queryBuilder->andWhere('IDENTITY(creditRequest.company) = :companyId')->setParameter('companyId', $criteria->companyId);
         }
-        if ($dueBefore !== null) {
-            $queryBuilder->andWhere('installment.dueDate < :dueBefore')->setParameter('dueBefore', $dueBefore);
+        if ($criteria->creditRequestStatus !== null) {
+            $queryBuilder->andWhere('creditRequest.status = :creditRequestStatus')->setParameter('creditRequestStatus', $criteria->creditRequestStatus);
+        }
+        if ($criteria->status !== null) {
+            $queryBuilder->andWhere('installment.status = :status')->setParameter('status', $criteria->status);
+        }
+        if ($criteria->paymentAttemptStatus !== null) {
+            $queryBuilder->andWhere('installment.lastPaymentAttemptStatus = :paymentAttemptStatus')->setParameter('paymentAttemptStatus', $criteria->paymentAttemptStatus);
+        }
+        if ($criteria->excludedPaymentAttemptStatus !== null) {
+            $queryBuilder
+                ->andWhere('installment.lastPaymentAttemptStatus IS NULL OR installment.lastPaymentAttemptStatus != :excludedPaymentAttemptStatus')
+                ->setParameter('excludedPaymentAttemptStatus', $criteria->excludedPaymentAttemptStatus);
+        }
+        if ($criteria->dueFrom !== null) {
+            $queryBuilder->andWhere('installment.dueDate >= :dueFrom')->setParameter('dueFrom', $criteria->dueFrom);
+        }
+        if ($criteria->dueBefore !== null) {
+            $queryBuilder->andWhere('installment.dueDate < :dueBefore')->setParameter('dueBefore', $criteria->dueBefore);
         }
 
         return $queryBuilder->getQuery()->getResult();
@@ -142,19 +150,6 @@ class DoctrineCreditRequestRepository implements CreditRequestRepositoryInterfac
             ->andWhere('creditRequest.approvalLimitDate < :before')
             ->setParameter('status', CreditRequestStatus::ProposalExpired)
             ->setParameter('before', $before)
-            ->getQuery()
-            ->getResult();
-    }
-
-    public function findWithOverdueInstallments(\DateTimeImmutable $now): array
-    {
-        return $this->em->createQueryBuilder()
-            ->select('installment')
-            ->from(Installment::class, 'installment')
-            ->where('installment.status = :status')
-            ->andWhere('installment.dueDate < :now')
-            ->setParameter('status', InstallmentStatus::Pending)
-            ->setParameter('now', $now)
             ->getQuery()
             ->getResult();
     }

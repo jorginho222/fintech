@@ -29,6 +29,7 @@ final class InstallmentPaymentsDashboardGetController
         return new JsonResponse([
             'monthPayments'   => $this->serializeList($payments->monthTotalAmount, $payments->monthPayments),
             'overduePayments' => $this->serializeList($payments->overdueTotalAmount, $payments->overduePayments),
+            'processingPayments' => $this->serializeList($payments->processingTotalAmount, $payments->processingPayments),
         ], Response::HTTP_OK);
     }
 

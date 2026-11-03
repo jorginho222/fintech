@@ -16,16 +16,21 @@ final class CreditRequestPaidChecker
         private readonly CreditRequestRepositoryInterface $creditRequestRepository,
     ) {}
 
-    public function execute(CreditRequest $creditRequest): void
+    /**
+     * @return bool whether the credit request became paid
+     */
+    public function execute(CreditRequest $creditRequest): bool
     {
         /** @var Installment $installment */
         foreach ($creditRequest->getInstallmentCollection() as $installment) {
             if ($installment->getStatus() !== InstallmentStatus::Paid) {
-                return;
+                return false;
             }
         }
 
         $creditRequest->changeStatus(CreditRequestStatus::Paid);
         $this->creditRequestRepository->save($creditRequest);
+
+        return true;
     }
 }

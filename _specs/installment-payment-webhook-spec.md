@@ -21,6 +21,8 @@ New flow:
 
 Installments with a payment processing are listed in a separate "Pagos en proceso" list in the dashboard, with its own total, so the frontend can show that the payment is awaiting confirmation. They are not listed in the payments calendar, nor counted in its total. They are still counted in the total debt, because they stay unpaid until approved.
 
+Overdue installments keep accruing late-payment interest every day, paused while a payment is processing. Scheduled tasks run at fixed times, so restarting the worker neither postpones nor repeats them.
+
 The company is notified by email, asynchronously, at every step of the payment flow (payment submitted, approved, rejected, processing failed, timed out), when an installment becomes overdue, when a credit request is fully paid, and a few days before an installment's due date.
 
 ## Functional Requirements
@@ -85,14 +87,36 @@ The company is notified by email, asynchronously, at every step of the payment f
 - A result for an unknown installment fails like the credit request application result does for an unknown application (the message ends in the failed transport).
 
 ### Processing timeout (scheduled task)
-- Add a recurring task to the CreditRequest module's schedule, following the existing scheduled tasks (recurring message + message handler + use case). It runs every hour so attempts do not stay processing much longer than the limit.
+- Add a recurring task to the CreditRequest module's schedule, following the existing scheduled tasks (recurring message + message handler + use case). It runs every hour, on the hour, so attempts do not stay processing much longer than the limit.
 - It sets to processing_timeout, dated now, every last payment attempt still processing whose processing date is more than 72 business hours ago.
 - Business hours are counted on business days only (Monday to Friday, all 24 hours); hours on Saturdays and Sundays do not count. Public holidays are not considered. For example, an attempt submitted on Friday at 10:00 times out after Wednesday at 10:00.
 - The installment status is not changed; the user can pay again.
 
 ### Overdue handling
-- The overdue marker skips installments whose last payment attempt is processing: the payment was submitted, so no late-payment penalty is applied while waiting for the decision.
+- The overdue marker skips installments whose last payment attempt is processing: the payment was submitted, so no late-payment penalty is applied while waiting for the decision. If the payment is then rejected, fails or times out, the interest of the days it waited is charged (see "Late-payment interest"); if it is approved, it is not.
 - A pending installment past its due date is marked overdue, with its penalty, when it has no attempt or its last attempt is rejected, processing_failed or processing_timeout. It keeps its last attempt, so the UI can show it as overdue with a rejected (or failed, or timed out) payment.
+
+### Late-payment interest (scheduled task)
+- Today an overdue installment is only charged one day of late-payment interest, when it is marked overdue. Add a new daily scheduled task, also available as a console command, that keeps charging interest on overdue installments, with the existing interest calculation (rate, 21% IVA and rounding per day are unchanged).
+- It applies to overdue installments of active credit requests.
+- Interest is charged for every day since the last day it was calculated, so a day is never lost if the task doesn't run. An installment that has never been calculated counts from its due date. The same day is never charged twice, so the overdue marker and this task can run in any order, and re-running them is safe.
+- The installment's total amount is updated with the interest, so the dashboard, the payments calendar, the total debt and the next payment request all show the new amount.
+- Installments whose last payment attempt is processing are skipped: the total amount must not change after it was sent to the payment service. Once the attempt is rejected, fails or times out, the next run charges the days that were paused. If it is approved, the paused days are not charged.
+- Installments that are already overdue are caught up: the task's first run charges every day since their last calculation, in one step. There is no data migration; their total amounts simply grow on that run.
+- Interest charged after a timeout is forgiven if the payment is then approved late: the installment's recorded total can be higher than the amount the service charged, the installment is paid anyway, and the difference is not collected.
+- No email is sent when interest is charged. The "Cuota vencida" email is still sent once, when the installment is marked overdue.
+
+### Scheduled task times
+- Scheduled tasks run at fixed times, in UTC, instead of counting from the moment the worker started:
+
+  | Task | When (UTC) | Argentina time |
+  |---|---|---|
+  | Expire proposals, mark overdue installments, charge late-payment interest, delete expired proposals, delete expired revoked tokens | Every day at 03:00 | 00:00 |
+  | Due date reminders | Every day at 12:00 | 09:00 |
+  | Payment processing timeout | Every hour, on the hour | Same |
+
+- Restarting the worker neither moves nor repeats a run. A run missed while the worker was down happens once when it comes back, even if several runs were missed.
+- When its time comes, a scheduled task is queued on the async transport and runs like any other async message: a failed run is retried and ends in the failed transport, where it can be retried by hand.
 
 ### Dashboard "Pagos" section
 - **Pagos del mes** lists pending installments due in the current month (as today), except those whose last attempt is processing.
@@ -135,8 +159,15 @@ The company is notified by email, asynchronously, at every step of the payment f
 - Due date reminder:
   - A new daily scheduled task sends the reminder for pending installments of active credit requests due exactly 3 calendar days from the day it runs.
   - Installments with a processing payment are skipped (the payment was already submitted).
-  - Each installment gets one reminder, because the task runs once a day and only matches one due day.
+  - The task runs at a fixed time (12:00 UTC, 09:00 in Argentina), so restarting the worker neither moves nor repeats it. Each installment gets one reminder, because the task only matches one due day.
+  - A run missed while the worker was down happens when it comes back. If the worker is down for more than one reminder day, only the last missed run happens, so the reminders of the earlier days are not sent.
 - The overdue marking email is new for the existing overdue marker; it is sent for every installment it marks overdue.
+- Credit application emails (added to this feature, outside the payment flow):
+  - The company gets an email when its credit application is sent to the credit application simulation service. Subject (indicative): "Solicitud de crédito enviada a evaluación". The body says it was sent for evaluation and that they will be notified of the result, and identifies the application: reference, amount and installment count.
+  - The email is queued in the async job, right after the service accepts the request, not when the application is created. If the call fails, no email is queued; the job is retried, and the email goes out once, after the attempt that succeeds.
+  - The company gets an email when the bureau's decision is applied, queued only after its transaction committed. Both identify the application the same way.
+    - Approved, subject (indicative) "Solicitud de crédito aprobada": the application was approved, with its annual rate and the date and time (UTC) by which the proposal must be confirmed.
+    - Rejected, subject (indicative) "Solicitud de crédito rechazada": the application was not approved. The bureau's rejection reason code is not included.
 
 ### General
 - New error messages are user-facing, in neutral Spanish (formal "usted", no voseo), per project conventions.
@@ -158,9 +189,20 @@ The company is notified by email, asynchronously, at every step of the payment f
 - Existing installments (no attempt yet): attempt status and date are null, and they behave as today until paid.
 - Approved payment of the last unpaid installment: two emails are sent, "Pago aprobado" and "Crédito pagado en su totalidad".
 - Late approval after a timeout: the company first got "No se pudo confirmar el pago" and then gets "Pago aprobado".
+- A scheduled task fails because the database is unavailable for a moment: it is retried and ends in the failed transport if it keeps failing.
+- A scheduled task fails partway through and is retried: tasks only process what's still pending, so the work already done isn't repeated, except for due date reminders, where the installments already reminded are emailed again.
+- The message broker is unavailable when a scheduled task is due: the task can't be queued, so that run is lost and the task next runs at its following time. Late-payment interest, overdue marking, proposal expiry and the timeout catch up then; that day's due date reminders are not sent.
 - The mail server is down: the email messages are retried and end in the failed transport; payments, results and scheduled tasks are not affected.
 - Installment paid before its reminder day: no reminder is sent (only pending installments are reminded).
 - Installment with a rejected, failed or timed out attempt on its reminder day: the reminder is sent (it is still unpaid).
+- The late-payment interest task doesn't run for some days (worker down): the next run charges all the missed days.
+- Overdue installment with a processing payment: its total amount doesn't change while waiting. If rejected on day 5, the next run charges the 5 paused days, and a retry sends the new amount.
+- Payment times out, interest resumes, and the payment is approved late: the installment is paid and the extra interest is forgiven, even though its recorded total is higher than the amount charged.
+- The credit application simulation service stays unreachable through all the retries: the company gets no email and the message ends in the failed transport. Retrying it successfully from there sends the email.
+- Queuing the credit application email fails after the simulation service accepted the request: the whole job is retried, so the service receives the same request again. Accepted, since it needs the message broker to fail at that exact moment.
+- The bureau sends a decision for an application that is no longer evaluation pending (repeated or contradictory): it is ignored. The application, the company's score and the credit request don't change, and no email is sent. A later change of decision is therefore not possible through the webhook.
+- Queuing the decision email fails after the transaction committed: the job is retried, and the retry ignores the decision because it was already applied. The job ends successfully and the company gets no email, even though the decision is applied. Accepted, since it needs the message broker to fail at that exact moment (see Open questions).
+- Overdue installment already marked overdue before this feature: the first run charges all the days since it was marked, so its total amount can grow noticeably at once.
 
 ## Acceptance Criteria
 - The installment status enum still has only pending, paid and overdue.
@@ -180,11 +222,20 @@ The company is notified by email, asynchronously, at every step of the payment f
 - Every installment listed in the dashboard and the payments calendar includes its last payment attempt.
 - Each event in the email notifications table queues one email in Spanish to the company's email address, from the no-reply address, identifying the installment (or the credit request for the fully paid email); ignored results queue none.
 - Emails are queued on the async transport, not sent during the request or task that triggers them.
+- Creating a credit application queues no email. Once the simulation service accepts the request, one email in Spanish is queued to the company's email address, from the no-reply address, with the application's reference, amount and installment count; a failed call queues none.
+- Applying a bureau decision queues one email in Spanish to the company's email address: approved includes the annual rate and the confirmation limit, rejected omits the rejection reason code. A failed transaction queues none.
+- A decision for an application that is no longer evaluation pending changes nothing and queues no email.
 - Payment result emails are queued only once the result's transaction has committed; a failed commit queues no email.
 - The daily reminder task emails pending installments due in 3 calendar days, skipping those with a processing payment.
+- The daily interest task charges overdue installments of active credit requests for every day since their last calculation, updates their total amount, sends no email and skips those with a processing payment.
+- After a processing attempt on an overdue installment is rejected, fails or times out, the next interest run charges the paused days; running the task twice on the same day charges nothing the second time.
+- Every scheduled task is queued on the async transport when it fires; a failed run is retried and ends in the failed transport.
+- Scheduled tasks run at the fixed times above whenever the worker was started; a restart doesn't repeat a run, and a run missed while the worker was down happens once when it comes back.
 
 ## Open questions
 - **Per-user recipients (future):** notifications should eventually go to every company user with the installment pay permission. That needs an email address on users (members today only have a display name and tax identifier), which is out of scope here.
+- **Lost decision email:** if queuing the decision email fails right after the commit, the retry ignores the decision and the email is never sent. Avoiding it needs a record of which decision emails were sent.
+- **Retry with a different amount:** a retry can send a higher amount (interest grew) under the same idempotency key. The payment service must use the new amount if the earlier attempt wasn't charged.
 
 ## Testing Guidelines
 Create a test file(s) in the ./tests folder for new feature, and create meaningful test for the following cases, without going too heavy:
@@ -198,4 +249,7 @@ Create a test file(s) in the ./tests folder for new feature, and create meaningf
 - Unit: email sending use case builds the email with the given sender, recipient, subject and text.
 - Unit: each payment flow use case (pay request, result handler, timeout task, overdue marker) notifies the right event, and an ignored result notifies nothing; payment result emails are not queued when the transaction fails; an approved last installment also notifies the credit request as paid.
 - Unit: due date reminder task selects pending installments due in 3 days and skips processing ones.
+- Unit: interest calculation charges every day since the last calculation, counts from the due date when never calculated, and charges nothing twice on the same day; several days give the same amounts as running once per day.
+- Functional: interest command charges overdue installments, skips processing ones, charges the paused days after a rejection, and sends no email.
+- Unit: schedule keeps its fixed times whenever the worker starts; a restart doesn't repeat a run, and missed runs happen once.
 - Functional: paying an installment queues the "Pago en proceso" email to the company's address on the async transport.

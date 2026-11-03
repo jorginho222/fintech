@@ -19,11 +19,18 @@ final class CreditRequestApplicationResultHandler
         private readonly CompanyUpdater                              $companyUpdater,
     ) {}
 
-    public function execute(CreditRequestApplicationResultDto $dto): CreditRequestApplication
+    /**
+     * @return CreditRequestApplication|null null when the decision was ignored, because the application was already decided
+     */
+    public function execute(CreditRequestApplicationResultDto $dto): ?CreditRequestApplication
     {
         $creditRequestApplication = $this->creditRequestApplicationRepository->findById($dto->applicationId);
         if ($creditRequestApplication === null) {
             throw new CreditRequestApplicationNotFoundException();
+        }
+
+        if (!$creditRequestApplication->isEvaluationPending()) {
+            return null;
         }
 
         $this->creditRequestApplicationUpdater->execute($creditRequestApplication, $dto->decision);

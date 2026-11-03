@@ -112,7 +112,7 @@ Migration: `bin/console doctrine:migrations:diff`, review that it only adds the 
 
 - **Authenticator** `src/CreditRequest/Infrastructure/Security/InstallmentPaymentGatewayWebhookAuthenticator.php` — same as `CreditBureauWebhookAuthenticator` (`X-Webhook-Secret` header, `hash_equals`) with its own secret, user identifier `installment-payment-gateway-webhook` and role `ROLE_INSTALLMENT_PAYMENT_GATEWAY_WEBHOOK`, so each external service has its own credential.
 - **Security** — new `installment_payment_gateway_webhook` firewall (pattern `^%app.api_prefix%/installment-payment-update$`, stateless, the new authenticator) placed before `api`, and an `access_control` rule `PUT` → `ROLE_INSTALLMENT_PAYMENT_GATEWAY_WEBHOOK` before the generic `ROLE_COMPANY` rule.
-- **DTO** `src/CreditRequest/Application/DTO/InstallmentPaymentResultDto.php` — built from the `Request` and validated in the constructor like `CreditRequestApplicationResultDto`: `installmentId` (`NotBlank`, `Uuid`), `status` (`NotBlank`, `Choice(['APPROVED', 'REJECTED', 'PROCESSING_FAILED'])`), `?string errorMessage` (`NotBlank` and `Length(max: 1000)` only when `status` is `PROCESSING_FAILED`, via `Assert\When`; ignored otherwise), validation messages in Spanish.
+- **DTO** `src/CreditRequest/Application/DTO/InstallmentPaymentResultDto.php` — built from the `Request` and validated in the constructor like `CreditRequestApplicationResultDto`: `installmentId` (`NotBlank`, `Uuid`), `status` (`NotBlank`, `Choice(['APPROVED', 'REJECTED', 'PROCESSING_FAILED'])`), `?string errorMessage` (required and at most 1000 characters only when `status` is `PROCESSING_FAILED`, via `Assert\Callback` like `CreditRequestApplicationResultDecisionDto`; ignored otherwise), validation messages in Spanish.
 - **Controller** `src/CreditRequest/UI/Api/Controller/InstallmentPaymentUpdatePutController.php` — `#[Route('/installment-payment-update', name: 'installment_payment_update', methods: ['PUT'])]`; validates eagerly, dispatches `HandleInstallmentPaymentResultMessage($request->getContent())`, returns `202` with no body.
 - **Message + handler** `HandleInstallmentPaymentResultMessage` (raw payload, routed to `async`) and `HandleInstallmentPaymentResultMessageHandler` — rebuilds the DTO and runs the use case inside `TransactionManagerInterface::transactional()`, like `HandleCreditRequestApplicationResultMessageHandler`. Then, **after `transactional()` returns**, passes the outcome it returned to `InstallmentPaymentResultNotifier`. `transactional()` (`EntityManager::wrapInTransaction()`) only returns once the commit succeeded and throws otherwise, so the emails are queued only for committed results; on a failed commit the message is retried and nothing was emailed.
 - **Use case** `src/CreditRequest/Application/UseCase/InstallmentPaymentResultHandler.php`:
@@ -126,7 +126,7 @@ Migration: `bin/console doctrine:migrations:diff`, review that it only adds the 
 
 ### 8. Timeout task
 
-- `TimeoutInstallmentPaymentAttemptsMessage` + `TimeoutInstallmentPaymentAttemptsMessageHandler` (passes `new \DateTimeImmutable()`), registered in `CreditRequestSchedule` with `RecurringMessage::every('1 hour', …)`.
+- `TimeoutInstallmentPaymentAttemptsMessage` + `TimeoutInstallmentPaymentAttemptsMessageHandler` (passes `new \DateTimeImmutable()`), registered in `CreditRequestSchedule` with `RecurringMessage::every('1 hour', …, from: '00:00')`. Also a console command, `app:credit-request:timeout-payment-attempts`, like the other scheduled jobs.
 - Use case `src/CreditRequest/Application/UseCase/InstallmentPaymentAttemptTimeoutMarker.php` — `execute(\DateTimeImmutable $now): int`: loads `searchInstallments()` with attempt `Processing`, and for each one where `BusinessHoursCalculator::addBusinessHours($attemptAt, 72) <= $now`, calls `timeoutPaymentAttempt($now)`, saves and calls `notifyPaymentProcessingTimeout()`. Returns the count, like `InstallmentOverdueMarker`. The 72-hour filter runs in PHP because it can't be expressed simply in SQL; processing attempts are few at any time.
 
 ### 9. Dashboard "Pagos" section
@@ -147,9 +147,9 @@ Add `lastPaymentAttemptStatus` (`?->value`) and `lastPaymentAttemptAt` (ATOM or 
 
 ### 11. Email notifications
 
-**Common use case** — `src/Shared/Application/UseCase/EmailSender.php`: `execute(string $from, string $to, string $subject, string $text): void`, builds a `Symfony\Component\Mime\Email` and calls Symfony `MailerInterface::send()`. No other logic, reusable from any module. (`CreditRequestProposalExpirationMailer` could move onto it later; not changed here.)
+**Common use case** — `src/Shared/Application/UseCase/EmailSender.php`: `execute(string $from, string $to, string $subject, string $text): void`, builds a `Symfony\Component\Mime\Email` and calls Symfony `MailerInterface::send()`. No other logic, reusable from any module. `CreditRequestProposalExpirationMailer` uses it too, and its subject and body are in Spanish, with the credit request's reference and the limit date as `d/m/Y H:i` labeled UTC.
 
-**Async** — route `Symfony\Component\Mailer\Messenger\SendEmailMessage: async` in `messenger.yaml`. `MailerInterface::send()` then only queues the email; the worker delivers it, with Messenger's retries and `failed` transport. This also makes the existing proposal expiration email async, which is fine (it runs from a scheduled task).
+**Async** — route `Symfony\Component\Mailer\Messenger\SendEmailMessage: async` in `messenger.yaml`. `MailerInterface::send()` then only queues the email; the worker delivers it, with Messenger's retries and `failed` transport. This also makes the existing proposal expiration email async, which is fine (it runs from a scheduled task). `ExpireCreditRequestProposalsCommandTest` moves to `assertQueuedEmailCount()`.
 
 **Notifier port** — `src/CreditRequest/Domain/Service/InstallmentPaymentNotifierInterface.php`, one method per event in the spec's table:
 - `notifyPaymentProcessing(Installment)`, `notifyPaymentApproved(Installment)`, `notifyPaymentRejected(Installment)`, `notifyPaymentProcessingFailed(Installment)`, `notifyPaymentProcessingTimeout(Installment)`, `notifyInstallmentOverdue(Installment)`, `notifyDueDateReminder(Installment)`, `notifyCreditRequestPaid(CreditRequest)`.
@@ -163,7 +163,7 @@ Add `lastPaymentAttemptStatus` (`?->value`) and `lastPaymentAttemptAt` (ATOM or 
 - `InstallmentOverdueMarker` — after `saveInstallment()`, `notifyInstallmentOverdue()` for each installment it marks (the search only returns pending, non-processing installments, so every one of them changes to overdue).
 
 **Due date reminder task**:
-- `SendInstallmentDueDateRemindersMessage` + handler (passes `new \DateTimeImmutable()`), `RecurringMessage::every('1 day', …)` in `CreditRequestSchedule`.
+- `SendInstallmentDueDateRemindersMessage` + handler (passes `new \DateTimeImmutable()`), `RecurringMessage::every('1 day', …, from: '12:00')` in `CreditRequestSchedule`. Also a console command, `app:credit-request:send-due-date-reminders`.
 - Use case `src/CreditRequest/Application/UseCase/InstallmentDueDateReminder.php` — `execute(\DateTimeImmutable $now): int`: `searchInstallments()` with `creditRequestStatus: Active`, `status: Pending`, `dueFrom: today + 3 days 00:00`, `dueBefore: today + 4 days 00:00`, `excludedPaymentAttemptStatus: Processing`; calls `notifyDueDateReminder()` for each and returns the count. Reminder offset as a class constant (`REMINDER_DAYS_BEFORE_DUE = 3`).
 
 ### 12. Local email testing — Mailpit
@@ -190,6 +190,47 @@ Update `README.md` in the same branch as the code (env and services rows are in 
   - Add `PUT /installment-payment-update` | Payment service webhook (shared-secret auth) | —.
   - Add `GET /installment/dashboard-payments` | List the dashboard's month, overdue and processing payments | `payment_calendar.view` (missing from the README today, and its response changes in this feature).
 
+### 14. Fixed schedules (implemented)
+
+`every()` without `from` counts from the worker's start, so a restart postpones the run. `CreditRequestSchedule` and `CompanySchedule` use fixed UTC times (`from:`, daily maintenance at 03:00, reminders at 12:00, the timeout hourly on the hour), `->stateful($cache)` so a restart neither repeats a run nor loses a missed one, and `->processOnlyLastMissedRun(true)`. `every()` with `from:` is used instead of `cron()` because `cron()` needs `dragonmantank/cron-expression`, which isn't installed. The state lives in `cache.app`, so `cache:clear` forgets it: that only loses the catch-up of a run missed at that moment.
+
+Covered by `CreditRequestScheduleTest`, which drives `MessageGenerator` with a `MockClock` and an `ArrayAdapter` to simulate restarts.
+
+**Retries** — the scheduler transport doesn't retry, and the schedule's checkpoint has already moved when a task fails, so that run was lost. Both schedules wrap each message in `RedispatchMessage($message, 'async')`, so the scheduler only queues the task and it runs on the `async` transport, with its retries and `failed` transport. A task that can't be queued because RabbitMQ is down is still lost (spec's edge cases). Covered by `CreditRequestScheduleTest` and `ScheduledTaskRedispatchTest`.
+
+### 15. Late-payment interest
+
+**`InstallmentPenaltyInterestUpdater`** — keeps the same signature and return value (`bool`, whether interest was charged), but charges every day due instead of always one:
+- Days due = whole calendar days between `lastPenaltyCalculationAt ?? dueDate` and `$today`, comparing dates at midnight. No dates at all → 1 day, as today. Zero days → returns `false` (covers the existing same-day guard).
+- Multiplies the rounded daily amounts by the days due, so the result is exactly the same as running once a day.
+- `InstallmentOverdueMarker` keeps calling it. A marker run delayed past the first overdue day now charges all its days instead of one.
+
+**Use case** `src/CreditRequest/Application/UseCase/InstallmentPenaltyInterestAccruer.php` — `execute(\DateTimeImmutable $now): int`: `searchInstallments()` with `creditRequestStatus: Active`, `status: Overdue`, `excludedPaymentAttemptStatus: Processing`; for each one, calls the updater and saves only when it returns `true`. Returns the number of installments charged. No notifier.
+
+**Scheduling** — `AccrueInstallmentPenaltyInterestMessage` + handler (passes `new \DateTimeImmutable()`), `RecurringMessage::every('1 day', …, from: self::DAILY_MAINTENANCE_TIME)` in `CreditRequestSchedule`, and a console command `app:credit-request:accrue-penalty-interest`, like `MarkOverdueInstallmentsCommand`. The order against the overdue marker at 03:00 doesn't matter, because the same day is never charged twice.
+
+**Catch-up** — no migration or special code: existing overdue installments have `lastPenaltyCalculationAt` set to the day they were marked, so the first run charges every day since. Overdue installments with no calculation date count from their due date.
+
+**Paused days** — no extra state: skipping processing installments leaves `lastPenaltyCalculationAt` untouched, so the first run after a rejection, failure or timeout charges the paused days. An approved installment leaves the overdue status, so it's never charged for them. A pending installment that passed its due date while processing has no calculation date, so `InstallmentOverdueMarker` charges it from the due date once it's no longer processing.
+
+**Late approval after a timeout** — the extra interest is forgiven. No code needed: `approvePaymentAttempt()` pays the installment whatever its total, and nothing collects the difference. The recorded total stays as it is.
+
+**README** — add late-payment interest to the "Scheduled jobs" feature entry.
+
+### 16. Credit application emails
+
+**Notifier port** — `src/CreditRequest/Domain/Service/CreditRequestApplicationNotifierInterface.php`: `notifyRequestSent()`, `notifyApproved()` and `notifyRejected()`, each receiving the `CreditRequestApplication`.
+
+**Mailer** — `src/CreditRequest/Infrastructure/Service/CreditRequestApplicationMailer.php` implements it through `EmailSender`, with `$fromAddress` bound to `%app.mailer.from_address%` in `services.yaml` (plus the interface alias). Recipient `Company::getEmail()`; every body has the reference, amount and installment count. Approved adds the annual rate and approval limit date from its credit request (`d/m/Y H:i`, labeled UTC). Rejected never includes `rejectionReason`.
+
+**Caller** — `CreditRequestApplicationSimulationService::execute()`, right after `sendRequest()`. It runs in the worker, so `CreditRequestApplicationHandler` and `SimulateCreditRequestApplicationMessageHandler` don't change: the first can't know the outcome of the call, and the second only delegates. `sendRequest()` throws when the call fails, so a failed attempt queues no email. Email errors aren't caught, per the edge case in the spec.
+
+**Result** — new `CreditRequestApplicationResultNotifier` use case maps the application's status to `notifyApproved()` / `notifyRejected()`. `HandleCreditRequestApplicationResultMessageHandler` calls it after `transactional()` returns, like the installment result flow, so a failed commit queues no email. 
+
+**Ignored decisions** — new `CreditRequestApplication::isEvaluationPending()`. `CreditRequestApplicationResultHandler::execute()` returns `null` without changing anything when it's `false`, before updating the application or the company's score, and the message handler then skips the notifier.
+
+**README** — add both emails to the "Email notifications" feature entry.
+
 ## Testing
 
 1. **Unit — `Installment`**: new `tests/Unit/CreditRequest/Domain/Model/InstallmentTest.php`:
@@ -213,6 +254,16 @@ Update `README.md` in the same branch as the code (env and services rows are in 
 13. **Unit — notifier calls**: with a mocked `InstallmentPaymentNotifierInterface`, extend the use case tests above — requester notifies processing; result handler returns the right outcome (applied status, `creditRequestPaid` on the last installment, `null` status for ignored results) and never calls the notifier; new `InstallmentPaymentResultNotifierTest` maps each outcome to the right notifier calls and makes none for an ignored result; `HandleInstallmentPaymentResultMessageHandler` test: when `transactional()` throws, the notifier is not called; timeout marker notifies timeout; new `InstallmentOverdueMarkerTest` notifies each marked installment.
 14. **Unit — `InstallmentDueDateReminderTest`**: asserts the criteria passed to `searchInstallments()` (3-day window, pending, active, processing excluded) and one notification per returned installment.
 15. **Functional — `InstallmentPayRequestPutControllerTest`**: also asserts a `SendEmailMessage` addressed to the company email is in the `async` in-memory transport.
+16. **Unit — `InstallmentPenaltyInterestUpdaterTest`**: add — charges several days since `lastPenaltyCalculationAt`, with the same amounts as calling it once per day; counts from the due date when never calculated; no dates → one day; existing same-day no-op still holds.
+17. **Unit — `InstallmentPenaltyInterestAccruerTest`**: asserts the criteria passed to `searchInstallments()`, saves only the installments charged, returns the count.
+18. **Functional — `InstallmentPaymentScheduledTasksCommandTest`**: add — the interest command charges an overdue installment for all its days and updates its total; skips a processing one; after a rejection, charges the paused days; a second run on the same day charges nothing; no email is queued.
+19. **Functional — `MarkOverdueInstallmentsCommandTest`**: a pending installment past its due date by several days is charged all of them.
+20. **Functional — `InstallmentPaymentScheduledTasksCommandTest`**: a late approval after interest resumed pays the installment and charges nothing else.
+21. **Unit — `CreditRequestApplicationSimulationServiceTest`**: sends the request and then notifies; a failed request notifies nothing and the exception reaches Messenger.
+22. **Unit — `CreditRequestApplicationMailerTest`**: sender, recipient, Spanish subject; body contains the company name, reference, amount and installment count; approved has the rate and limit date; rejected omits the reason code.
+23. **Functional — `CreditRequestApplicationCreatePostControllerTest`**: creating an application queues no email.
+24. **Unit — `CreditRequestApplicationResultNotifierTest`**: approved and rejected call their method; pending calls neither.
+25. **Functional — `CreditRequestApplicationResultHandlerTest`**: the message handler queues the email to the company; a failed transaction queues none; a repeated rejected or approved decision sends one email and creates one credit request; a contradictory decision changes nothing.
 
 ## Verification
 
@@ -221,3 +272,5 @@ Update `README.md` in the same branch as the code (env and services rows are in 
 3. Manually: `PUT /api/v1/installment/{id}/pay-request` → `202` with `lastPaymentAttemptStatus: processing`; consume with `bin/console messenger:consume async -vv` and check the outgoing request (URL, body, `Idempotency-Key`); `PUT /api/v1/installment-payment-update` with the secret and `APPROVED` / `REJECTED` / `PROCESSING_FAILED`, consume again, and check the installment and credit request; check the dashboard and calendar responses.
 4. Emails: with `MAILER_DSN=smtp://mailpit:1025` in `.env` and the `worker` container running, go through the flow above and open http://localhost:8025 to check each email's sender (no-reply), recipient (company email), Spanish subject and body. Same for the timeout, overdue and reminder emails after triggering their tasks.
 5. Timeout: set an attempt's `last_payment_attempt_at` back over 72 business hours and run `bin/console messenger:consume scheduler_credit_request --limit=1` (or call the use case) to see it become `processing_timeout`.
+6. Credit application: apply with a real `CREDIT_BUREAU_SIMULATION_WEBHOOK_URL` and the `worker` running, then check the email at http://localhost:8025; `PUT /api/v1/credit-request-application-update` with the secret and each decision, and check its email. With an unreachable URL, check that no email arrives and the message ends in the failed transport.
+7. Interest: set an overdue installment's `last_penalty_calculation_at` back a few days and run `bin/console app:credit-request:accrue-penalty-interest`; check its penalty and total grew, and that a second run changes nothing.

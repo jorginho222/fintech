@@ -10,8 +10,10 @@ use App\CreditRequest\Application\UseCase\InstallmentPaymentsDashboardSearcher;
 use App\CreditRequest\Domain\Model\CreditRequest;
 use App\CreditRequest\Domain\Model\CreditRequestStatus;
 use App\CreditRequest\Domain\Model\Installment;
+use App\CreditRequest\Domain\Model\InstallmentPaymentAttemptStatus;
 use App\CreditRequest\Domain\Model\InstallmentStatus;
 use App\CreditRequest\Domain\Repository\CreditRequestRepositoryInterface;
+use App\CreditRequest\Domain\Repository\InstallmentSearchCriteria;
 use App\Shared\Domain\Service\AuthenticatedCompanyIdProviderInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -19,37 +21,54 @@ final class InstallmentPaymentsDashboardSearcherTest extends TestCase
 {
     private const string COMPANY_ID = 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa';
 
-    public function testSearchesPendingPaymentsWithinTheCurrentMonthAndOverduePaymentsWithoutBounds(): void
+    public function testSearchesTheThreeListsLeavingProcessingPaymentsOnlyInTheirOwn(): void
     {
         $monthStart = new \DateTimeImmutable('first day of this month midnight');
         $monthEnd   = $monthStart->modify('first day of next month');
+        $criteria   = [];
 
         $repository = $this->createMock(CreditRequestRepositoryInterface::class);
-        $repository->expects(self::exactly(2))->method('findActiveCreditInstallments')
-            ->willReturnCallback(static function (string $companyId, InstallmentStatus $status, ?\DateTimeImmutable $dueFrom = null, ?\DateTimeImmutable $dueBefore = null) use ($monthStart, $monthEnd): array {
-                self::assertSame(self::COMPANY_ID, $companyId);
-                if ($status === InstallmentStatus::Pending) {
-                    self::assertEquals($monthStart, $dueFrom);
-                    self::assertEquals($monthEnd, $dueBefore);
-                } else {
-                    self::assertSame(InstallmentStatus::Overdue, $status);
-                    self::assertNull($dueFrom);
-                    self::assertNull($dueBefore);
-                }
+        $repository->expects(self::exactly(3))->method('searchInstallments')
+            ->willReturnCallback(static function (InstallmentSearchCriteria $searched) use (&$criteria): array {
+                $criteria[] = $searched;
 
                 return [];
             });
 
         $this->searcher($repository)->execute();
+
+        self::assertEquals([
+            new InstallmentSearchCriteria(
+                companyId: self::COMPANY_ID,
+                creditRequestStatus: CreditRequestStatus::Active,
+                status: InstallmentStatus::Pending,
+                excludedPaymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+                dueFrom: $monthStart,
+                dueBefore: $monthEnd,
+            ),
+            new InstallmentSearchCriteria(
+                companyId: self::COMPANY_ID,
+                creditRequestStatus: CreditRequestStatus::Active,
+                status: InstallmentStatus::Overdue,
+                excludedPaymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+            ),
+            new InstallmentSearchCriteria(
+                companyId: self::COMPANY_ID,
+                creditRequestStatus: CreditRequestStatus::Active,
+                paymentAttemptStatus: InstallmentPaymentAttemptStatus::Processing,
+            ),
+        ], $criteria);
     }
 
     public function testEachTotalSumsItsOwnList(): void
     {
         $repository = $this->createStub(CreditRequestRepositoryInterface::class);
-        $repository->method('findActiveCreditInstallments')->willReturnCallback(
-            fn (string $companyId, InstallmentStatus $status): array => $status === InstallmentStatus::Pending
-                ? [$this->installment(1, '1000.10'), $this->installment(2, '2000.25')]
-                : [$this->installment(3, '500.5000')],
+        $repository->method('searchInstallments')->willReturnCallback(
+            fn (InstallmentSearchCriteria $criteria): array => match (true) {
+                $criteria->paymentAttemptStatus === InstallmentPaymentAttemptStatus::Processing => [$this->installment(4, '700.00')],
+                $criteria->status === InstallmentStatus::Pending => [$this->installment(1, '1000.10'), $this->installment(2, '2000.25')],
+                default => [$this->installment(3, '500.5000')],
+            },
         );
 
         $payments = $this->searcher($repository)->execute();
@@ -58,17 +77,20 @@ final class InstallmentPaymentsDashboardSearcherTest extends TestCase
         self::assertSame('3000.35', $payments->monthTotalAmount);
         self::assertCount(1, $payments->overduePayments);
         self::assertSame('500.50', $payments->overdueTotalAmount);
+        self::assertCount(1, $payments->processingPayments);
+        self::assertSame('700.00', $payments->processingTotalAmount);
     }
 
     public function testTotalsAreZeroWhenThereIsNothingToPay(): void
     {
         $repository = $this->createStub(CreditRequestRepositoryInterface::class);
-        $repository->method('findActiveCreditInstallments')->willReturn([]);
+        $repository->method('searchInstallments')->willReturn([]);
 
         $payments = $this->searcher($repository)->execute();
 
         self::assertSame('0.00', $payments->monthTotalAmount);
         self::assertSame('0.00', $payments->overdueTotalAmount);
+        self::assertSame('0.00', $payments->processingTotalAmount);
     }
 
     private function searcher(CreditRequestRepositoryInterface $repository): InstallmentPaymentsDashboardSearcher

@@ -10,8 +10,10 @@ Built with **Symfony 7.3** and **PHP 8.3**, following **Domain-Driven Design** a
 - **Users and permissions:** each company has one admin user (logs in with the company's CUIT) who manages up to 10 active member users (log in with their CUIL). Members are deactivated or reactivated, never deleted, and only reach the resources their permissions allow
 - **Credit applications:** a company applies for credit; the application is sent asynchronously through RabbitMQ to the credit bureau
 - **Credit bureau webhook:** the bureau posts its decision back, authenticated with a shared secret
-- **Credit requests and installments:** confirm a proposal, list and pay pending installments, and get a company's total debt
-- **Scheduled jobs:** daily tasks expire stale proposals, mark overdue installments, and clean up expired revoked tokens
+- **Credit requests and installments:** confirm a proposal, list pending installments, request their payment (confirmed asynchronously), and get a company's total debt
+- **Installment payment webhook:** a payment is sent through RabbitMQ to the payment service, which posts the result back, authenticated with its own shared secret
+- **Email notifications:** the company is emailed asynchronously when a credit application is sent to the credit bureau and when the bureau's decision arrives, and about each step of a payment, overdue installments, fully paid credits and upcoming due dates
+- **Scheduled jobs:** daily tasks at fixed times expire stale proposals, mark overdue installments, charge late-payment interest on overdue installments, send due date reminders, and clean up expired revoked tokens; an hourly task times out payments with no result after 72 business hours. All of them run through RabbitMQ, so a failed run is retried and then kept in the failed transport
 
 ## Tech stack
 
@@ -76,10 +78,12 @@ Then edit `.env`. With the default Docker setup the values are:
 | `JWT_PUBLIC_KEY` | `%kernel.project_dir%/config/jwt/public.pem` |
 | `JWT_PASSPHRASE` | the passphrase you use in step 4 |
 | `JWT_TOKEN_TTL` / `JWT_REFRESH_TOKEN_TTL` | token lifetimes in seconds, e.g. `3600` / `2592000` |
-| `MAILER_DSN` | your SMTP server |
+| `MAILER_DSN` | `smtp://mailpit:1025` for the local inbox, or your SMTP server |
 | `MAILER_FROM_ADDRESS` | the sender address for outgoing mail |
 | `CREDIT_BUREAU_SIMULATION_WEBHOOK_URL` | the credit bureau endpoint that receives applications |
 | `CREDIT_BUREAU_WEBHOOK_SECRET` | the shared secret the bureau sends with its webhook calls |
+| `PAYMENT_GATEWAY_SIMULATION_WEBHOOK_URL` | the payment service endpoint that receives installment payments |
+| `PAYMENT_GATEWAY_WEBHOOK_SECRET` | the shared secret the payment service sends with its webhook calls |
 
 ### 3. Build and start the containers
 
@@ -95,6 +99,7 @@ This starts:
 | API (nginx) | http://localhost:8080 |
 | Adminer (DB admin) | http://localhost:8081 |
 | RabbitMQ management | http://localhost:15672 (`guest` / `guest`) |
+| Mailpit (local email inbox) | http://localhost:8025 |
 | PostgreSQL | `localhost:5432` |
 | Messenger worker | consumes the `async` queue and both schedules |
 
@@ -137,7 +142,7 @@ Registering a company creates its **admin user**. The admin logs in with the com
 | | `credit_request.confirm` | Confirm a credit proposal |
 | Credit requests | `credit_request.view` | Get a credit request |
 | | `credit_request.list` | List credit requests |
-| | `installment.pay` | Pay an installment |
+| | `installment.pay` | Request an installment payment |
 | Payment calendar | `payment_calendar.view` | List pending installments |
 | Total debt | `total_debt.view` | Get the company's total debt |
 
@@ -170,7 +175,9 @@ All routes are under `/api/v1`. Except for registration, login and refresh, ever
 | `GET` | `/credit-request/{id}` | Get a credit request | `credit_request.view` |
 | `PUT` | `/credit-request/{id}/confirm` | Confirm a credit proposal | `credit_request.confirm` |
 | `GET` | `/installment/pending-to-pay/search` | List pending installments | `payment_calendar.view` |
-| `PUT` | `/installment/{id}/pay` | Pay an installment | `installment.pay` |
+| `GET` | `/installment/dashboard-payments` | List the dashboard's month, overdue and processing payments | `payment_calendar.view` |
+| `PUT` | `/installment/{id}/pay-request` | Request an installment payment | `installment.pay` |
+| `PUT` | `/installment-payment-update` | Payment service webhook (shared-secret auth) | — |
 | `GET` | `/company-total-debt` | Get the company's total outstanding debt | `total_debt.view` |
 
 Errors come back as `{"error": "..."}`, or `{"errors": {field: [messages]}}` for validation failures. A missing permission gives 403.
