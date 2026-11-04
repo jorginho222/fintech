@@ -103,6 +103,8 @@ This starts:
 | PostgreSQL | `localhost:5432` |
 | Messenger worker | consumes the `async` queue and both schedules |
 
+The containers don't start with the system or restart on their own. If the worker stops, for example because RabbitMQ went down, start it again with `docker compose up -d worker`.
+
 ### 4. Install dependencies and generate JWT keys
 
 ```bash
