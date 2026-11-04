@@ -19,7 +19,6 @@ services:
       context: .
       dockerfile: docker/php/Dockerfile
     command: bin/console messenger:consume scheduler_credit_request scheduler_company async -vv
-    restart: unless-stopped
     volumes:
       - .:/var/www/html
     environment:
